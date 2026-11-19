@@ -188,7 +188,7 @@ func findCoreDir() string {
 // run, as its "moria <version>" banner, or "" when there is none. It asks
 // defile.ingest rather than looking for the binary itself, so the answer always
 // matches the resolution order that defile/ingest documents (an $DEFILE_MORIA
-// override, then the in-tree build of the pinned submodule, then PATH) instead
+// override, then the optional independent source build, then PATH) instead
 // of drifting from it. The version -- not just a yes/no -- is what makes an
 // extract run reproducible: with three possible sources for the binary,
 // "available" alone does not say which one answered.

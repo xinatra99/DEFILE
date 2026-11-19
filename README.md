@@ -8,7 +8,8 @@ investigation. Static detections are research leads, not proof of exploitability
 
 **[Explore DEFILE Live](https://defile-demo.austinbc.dev/)** ·
 [Full installation](#install-defile-full) · [Demo guide](LIVE_DEMO.md) ·
-[Environment and integrations](ENVIRONMENT.md)
+[Environment and integrations](ENVIRONMENT.md) · [Settings](SETTINGS.md) ·
+[CLI](CLI.md) · [Troubleshooting](TROUBLESHOOTING.md) · [Documentation map](docs/README.md)
 
 ## Full and Live
 
@@ -95,6 +96,8 @@ Keep the same `service/.data` directory across restarts/upgrades. Credentials,
 provider encryption keys, uploads and reports belong to that private installation.
 Never commit or deploy its runtime. Password recovery is administrator-managed;
 see [service authentication](service/README.md) and [upgrading](UPGRADING.md).
+Follow [First investigation](USAGE.md) for a harmless trial, evidence review,
+triage and report downloads.
 
 Keep the virtual environment active when starting Full so `python3` resolves the
 engine. The launcher binds to loopback. For CLI-only analysis:
@@ -109,10 +112,10 @@ usable regions and choose **Start analysis**. DEFILE does not execute the firmwa
 
 ## Optional integrations
 
-**Moria extraction:** install a compatible executable on PATH or set its absolute
-path below. Source/binaries are not bundled. Follow [Moria's build instructions](https://github.com/nmatt0/moria).
-If you place its source in `moria/`, `bash scripts/build-moria.sh` can build it.
-No Git submodule is required.
+**Moria extraction:** source/binaries are external. Use the complete
+[pinned source build and extraction check](ENVIRONMENT.md#moria-extraction),
+including codec dependencies, executable discovery and restart instructions.
+No Git submodule is required; a specific compatible commit is documented.
 
 ```bash
 export DEFILE_MORIA=/absolute/path/to/moria
@@ -171,6 +174,7 @@ and [manifest](demo/data/manifest.json) for generation, sanitization and refresh
 ```bash
 npm run build
 node --test tests/*.test.mjs
+. .venv/bin/activate
 python3 -m pip install pytest
 python3 -m pytest tests -q
 cd service
@@ -181,7 +185,9 @@ go vet ./...
 Cross-architecture tests require matching cross-compilers. Live Ghidra and
 populated-feed tests need their optional configuration; skips are not passes.
 [RELEASE.md](RELEASE.md) records the actual clean-checkout, regression and public
-production checks and any outstanding limitations.
+production checks and any outstanding limitations. The complete
+[upstream installation comparison](UPSTREAM_AUDIT.md) records preserved behavior,
+intentional differences and corrected instructions.
 
 ## Deployment
 

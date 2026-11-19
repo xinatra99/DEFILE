@@ -45,8 +45,8 @@ def moria_path() -> str | None:
 
     1. ``$DEFILE_MORIA`` -- an explicit override, for pointing at a build
        somewhere else entirely (a release download, a second checkout).
-    2. ``<repo>/moria/build/moria`` -- the in-tree build of the pinned
-       submodule.
+    2. ``<repo>/moria/build/moria`` -- an optional independent source build
+       (the tested commit is documented in ENVIRONMENT.md).
     3. ``moria`` on ``PATH`` -- a system or user install.
     """
     from ..compat import env_value

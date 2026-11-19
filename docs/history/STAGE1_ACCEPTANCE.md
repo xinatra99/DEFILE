@@ -1,3 +1,5 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # Stage 1 acceptance — CONDITIONAL PASS
 
 Verified November 19, 2026 against the real Go service and Python engine,

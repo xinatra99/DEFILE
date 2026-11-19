@@ -1,3 +1,5 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # Stage 3.5 usability and navigation refinement
 
 DEFILE Full and Live retain the Stage 2A design and the Stage 3 distribution model.
@@ -110,7 +112,7 @@ npm run preview
 Open **http://localhost:8081** for Live. Static output remains **dist/live**;
 the refreshed static archive is **dist/DEFILE-Live.zip**. Full remains at
 **http://localhost:8080**, with its existing account and private data.
-See [LIVE_DEMO.md](LIVE_DEMO.md) for Full setup and the future static deployment
+See [LIVE_DEMO.md](../../LIVE_DEMO.md) for Full setup and the future static deployment
 procedure. The refreshed project archive is **dist/DEFILE-source.zip**.
 
 ## Remaining usability limits

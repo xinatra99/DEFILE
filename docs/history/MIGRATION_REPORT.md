@@ -1,3 +1,5 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # DEFILE identity migration
 
 This records the initial migration checks. The later, broader live acceptance

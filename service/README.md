@@ -23,7 +23,7 @@ needed — the CLI contract is the integration surface.
 ```bash
 cd service
 go build -o defile-service .                     # Go 1.25+
-./defile-service -addr :8080 -core /path/to/repo    # -core auto-detected if run inside the repo
+./defile-service -addr 127.0.0.1:8080 -core .. -data ./.data
 # open http://localhost:8080
 ```
 
@@ -36,8 +36,10 @@ estimate; raise it for unusually large targets, e.g. an automotive/infotainment
 image with thousands of binaries including embedded Chromium, which can need
 well over an hour just for the disassemble stage).
 
-Requires `python3` with the `defile` package importable from `-core` (i.e. the
-core's deps installed: `python3-capstone python3-pyelftools`).
+Requires the complete Python package installed with `python3 -m pip install -e .`
+in an active venv; two distribution Python packages alone are insufficient.
+See [setup](../ENVIRONMENT.md), the complete [settings reference](../SETTINGS.md),
+and [troubleshooting](../TROUBLESHOOTING.md). All flag defaults are listed there.
 
 ### Production launch
 
@@ -50,15 +52,10 @@ Keep the same `-data` directory when upgrading. An empty or stale path can make
 history and provider profiles appear missing without producing an error. See
 `../UPGRADING.md` before changing data locations.
 
-**Restarting kills any job that's currently running — it does not survive as an
-orphaned process.** Don't assume an in-flight `python3 -m defile.cli analyze` subprocess
-will keep running independently after the parent `defile-service` process is killed; in
-practice it gets torn down along with it (observed even though the subprocess is
-launched in its own process group via `Setpgid: true`, which in theory should isolate
-it from a plain `kill <pid>` on the parent — most likely a host-level cgroup/session
-teardown rather than anything `job.go` itself does; see PROGRESS.md's 2026-08-25 entry
-for the full writeup). Check for a running job before restarting; there's no partial
-report to recover afterward.
+Wait for active jobs or cancel them before restarting. Interrupted scans are not
+resumable. Do not assume a worker survives shutdown of the server/session; process
+group and supervisor behavior vary. Completed reports and job history persist in
+the selected runtime. Startup reconciles unfinished records.
 
 ### Auth flags: `-auth` / `-user` / `-pass` / `-reset-pass`
 
@@ -92,20 +89,43 @@ back in.
 | `GET /api/jobs/{id}/report` | Findings report with triage overlaid. `?format=json\|md\|sbom`, `?download=1`. |
 | `POST /api/jobs/{id}/triage` `{"finding_id","state"}` | Set triage (`new\|confirmed\|false_positive\|accepted_risk`); persisted. |
 | `POST /api/upload` (multipart `file`) | Store an artifact server-side; returns a `target` path to submit. |
-| `GET /healthz` | Liveness. |
+| `GET /api/captcha`, `POST /api/login` | Public challenge and username/password login. Login requires `captcha_id` and `captcha_answer`; returns a private `session` token. |
+| `POST /api/logout`, `POST /api/change-password` | Revoke current session, or verify old password and set a new one. |
+| `GET /api/jobs/{id}/summary` | Aggregate counts/metadata without loading the full report. |
+| `GET /api/jobs/{id}/findings` | Paged findings; `offset`, `limit`, repeated `sev`, `vclass`, `triage`, `min_conf`, `q`, `sort`. |
+| `GET /api/jobs/{id}/binaries`, `/scripts`, `/components`, `/files` | Inventory lists; `offset`/`limit`, or `all=1` where supported; files also accept `kind`. |
+| `GET /api/jobs/{id}/binary?path=...` | One recorded binary's metadata/functions. |
+| `GET /api/jobs/{id}/file-content?path=...` | Preview only a regular file recorded for this scan; special/unrecorded paths are refused. |
+| `GET /api/jobs/{id}/busybox`, `/services`, `/dir-chart` | BusyBox/init inventory, static services, and root composition PNG. |
+| `POST /api/jobs/{id}/pause`, `/resume`, `/stop` | Control running processes; stop is not resumable. |
+| `DELETE /api/jobs/{id}`, `POST /api/jobs/batch-delete` | Remove terminal jobs/reports; batch body uses `ids`. |
+| `POST /api/compare` | Compare scans; JSON body `a`, `b`, optional `sensitive_keywords`; bounded detail output. |
+| `GET /api/triage/history` | Newest-first audit history; optional `finding_id`. |
+| `GET /api/vulndb` | Curated data, scanner checker availability and local advisory counts. |
+| `POST /api/chart/pie` | Render named/value slices as a PNG. |
+| `GET`, `POST /api/ai/providers`; `PUT`, `DELETE /api/ai/providers/{id}` | Manage profiles; encrypted provider keys are never returned. |
+| `POST /api/ai/models` | Fetch/test models with host/key/kind or saved `provider_id`; no completion requested. |
+| `GET`, `POST /api/jobs/{id}/ai-analysis` | Read saved investigation or run with `provider_id`; response streams NDJSON events and persists progress. |
+| `GET /healthz` | Liveness plus `login_required`, `ghidra_available`, `moria_version`. |
 | `GET /` | Embedded single-page web UI. |
 
-Job status machine: `queued → running → completed | failed`. While running,
+The table uses `/scripts` etc. as suffixes of the immediately preceding
+`/api/jobs/{id}` prefix. Apart from CAPTCHA/login and health, state APIs require
+a valid session. Set `DEFILE_SESSION` from your own login response and
+`DEFILE_JOB_ID` from the job response before using the examples; keep tokens private.
+
+Job states: `queued → running`, with pause/resume between `running` and `paused`.
+Terminal outcomes are `completed`, `failed` or `cancelled`. While running,
 `progress` (0–100), `stage`, and `detail` update live; clients receive them via
 the SSE `events` stream (no polling).
 
 ```bash
-curl -XPOST localhost:8080/api/jobs -H 'Content-Type: application/json' \
+curl -XPOST localhost:8080/api/jobs -H "Authorization: Bearer $DEFILE_SESSION" -H 'Content-Type: application/json' \
      -d '{"target":"/path/to/extracted_rootfs"}'
-curl -N  localhost:8080/api/jobs/<id>/events                 # live progress (SSE)
-curl     localhost:8080/api/jobs/<id>/report                 # findings JSON
-curl     "localhost:8080/api/jobs/<id>/report?format=md"     # Markdown export
-curl -XPOST localhost:8080/api/jobs/<id>/triage \
+curl -N -H "Authorization: Bearer $DEFILE_SESSION" "localhost:8080/api/jobs/$DEFILE_JOB_ID/events"                 # live progress (SSE)
+curl -H "Authorization: Bearer $DEFILE_SESSION" "localhost:8080/api/jobs/$DEFILE_JOB_ID/report"                 # findings JSON
+curl -H "Authorization: Bearer $DEFILE_SESSION" "localhost:8080/api/jobs/$DEFILE_JOB_ID/report?format=md"     # Markdown export
+curl -XPOST "localhost:8080/api/jobs/$DEFILE_JOB_ID/triage" -H "Authorization: Bearer $DEFILE_SESSION" \
      -H 'Content-Type: application/json' \
      -d '{"finding_id":"<id>","state":"false_positive"}'     # triage a finding
 ```
@@ -154,9 +174,9 @@ only, never text.
 ## Firmware extraction (moria)
 
 The `extract` job kind shells out to `python3 -m defile.cli extract`, which runs `moria`. The
-binary is resolved by `defile/ingest` as `$DEFILE_MORIA`, then the in-tree build of the optional
-in-tree build at `moria/build/moria`, then `moria` on `PATH` — build it with
-`scripts/build-moria.sh` from the repo root.
+binary is resolved by `defile/ingest` as `$DEFILE_MORIA`, then the optional independent
+source build at `moria/build/moria`, then `moria` on `PATH`. Follow the exact
+[pinned build](../ENVIRONMENT.md#moria-extraction), not `git submodule update`.
 
 The service probes this **once at startup** and logs what answered:
 
@@ -185,7 +205,9 @@ under `/api/jobs/{id}`. List endpoints support their existing offset/limit filte
 Full `/report` exports remain complete and are not used to render ordinary tabs.
 `POST /api/compare` computes a server-side diff. Jobs also support pause, resume,
 stop, single deletion and batch deletion. Triage audit history is served at
-`GET /api/triage/history`.
+`GET /api/triage/history`. The REST examples above require authentication;
+add `-H "Authorization: Bearer $DEFILE_SESSION"` after completing the UI login
+and obtaining your own session. Never publish that token or token-bearing URLs.
 
 Authentication uses CAPTCHA plus username/password at `/api/login`; protected API
 examples assume a valid `Authorization: Bearer <token>` header. `/api/logout` and

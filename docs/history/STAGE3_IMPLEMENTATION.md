@@ -1,3 +1,5 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # Stage 3 implementation and verification
 
 DEFILE Live is a locally implemented, interactive static edition of the Stage 2A
@@ -82,7 +84,7 @@ Open **http://localhost:8081** with no login. Output: **dist/live**.
 Packages: **dist/DEFILE-Live.zip** (static output) and **dist/DEFILE-source.zip**
 (redistributable project source, excluding runtime/tools/validation).
 Full remains separately available at **http://localhost:8080**, with its existing
-account and private runtime. See [LIVE_DEMO.md](LIVE_DEMO.md) for Full installation,
+account and private runtime. See [LIVE_DEMO.md](../../LIVE_DEMO.md) for Full installation,
 data refresh and the intended future GitHub-to-Vercel procedure.
 
 Remaining limits are deliberate: Live cannot analyze uploads, execute tools,

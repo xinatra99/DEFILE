@@ -1,10 +1,12 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # DEFILE engineering progress
 
 English consolidation of the supplied engineering notes. Release measurements
 below are historical observations, not claims that those firmware images, external
 tools or GPUs were retested during this migration. Current results belong in
 [MIGRATION_REPORT.md](MIGRATION_REPORT.md). Requirements are in
-[firmware-analysis-requirements.md](firmware-analysis-requirements.md).
+[firmware-analysis-requirements.md](../../firmware-analysis-requirements.md).
 
 ## Architecture and contracts
 

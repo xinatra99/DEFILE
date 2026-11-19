@@ -1,3 +1,5 @@
+> Historical engineering record. For current installation and verification, use the [README](../../README.md) and [release report](../../RELEASE.md).
+
 # Stage 2A implementation and verification
 
 Implemented locally on November 19, 2026 against the accepted
@@ -27,7 +29,7 @@ share the same visual system. Destructive actions retain confirmations.
 `workbench.css` owns the shared system, `evidence.css` the technical data surfaces,
 `workbench.js` the existing application logic and `interface.js` DOM accessibility.
 They are served through the existing embedded-file mechanism. Local heading font
-assets retain their license. [DESIGN.md](DESIGN.md) and `.impeccable/design.json`
+assets retain their license. [DESIGN.md](../../DESIGN.md) and `.impeccable/design.json`
 record the implemented tokens and reusable components.
 
 ## Actual verification
@@ -59,7 +61,7 @@ retained; portfolio typography and live-only progress indicators are intentional
 ## Screenshots and evidence
 
 Historical validation captures are retained privately. The public release instead
-includes [sanitized Live screenshots](docs/screenshots/README.md) showing the current
+includes [sanitized Live screenshots](../../docs/screenshots/README.md) showing the current
 shared workbench with approved educational records.
 
 Additional viewport, state and before/after captures, browser results, downloaded
@@ -68,7 +70,7 @@ reports and integrity manifests remain private under `.validation/stage2a/`.
 ## Local startup
 
 For a fresh Linux/macOS/WSL installation, follow the independent
-[README](README.md). From the source root with dependencies installed and the
+[README](../../README.md). From the source root with dependencies installed and the
 virtual environment active:
 
 ```bash
@@ -77,7 +79,7 @@ sh service/start.sh
 
 Private workstation launchers and runtime images are not part of the public
 distribution. Keep the existing data path when upgrading. Broad feed configuration
-is documented in [ENVIRONMENT.md](ENVIRONMENT.md).
+is documented in [ENVIRONMENT.md](../../ENVIRONMENT.md).
 
 For an existing Linux/WSL installation with dependencies available, from the source
 directory:

@@ -43,12 +43,7 @@ Apple-inspired restraint, neutral surfaces and precise technical presentation.
 
 ## Evidence on Hand
 
-STAGE1_ACCEPTANCE.md, STAGE2A_IMPLEMENTATION.md and STAGE3_IMPLEMENTATION.md;
-project-authored fixtures, sanitized engine recordings and independent browser
-checks of both editions. Stage 3 authorizes local implementation and packaging;
-GitHub and Vercel publication remain outside this stage.
-Stage 3.5 refines sample discovery, selected-scan context, evidence return paths,
-integration discovery and report downloads in both editions. See STAGE35_USABILITY.md.
+[Historical stage records](docs/history/README.md) preserve earlier implementation and browser evidence. Current publication and verification facts are in [RELEASE.md](RELEASE.md) and the [functional parity audit](UPSTREAM_AUDIT.md).
 
 ## Product Principles
 

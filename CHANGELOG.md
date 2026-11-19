@@ -1,8 +1,8 @@
 # Changelog
 
 English, feature-level changelog. Full technical detail (root causes,
-before/after numbers, test counts) lives in [`PROGRESS.md`](PROGRESS.md), consolidated in English. Entries for v3.5 and earlier are summarized in
-[`README.md`](README.md#changelog); this file continues from v3.6 onward.
+before/after numbers, test counts) lives in [`PROGRESS.md`](docs/history/PROGRESS.md), consolidated in English. Entries for v3.5 and earlier are summarized in
+the historical [progress record](docs/history/PROGRESS.md); this file continues from v3.6 onward.
 
 ## DEFILE identity migration — 2026-11-19
 
@@ -10,7 +10,7 @@ Product identity, technical package names, commands, progress messages and brows
 settings now use DEFILE. Authored UI and documentation are English only, with the
 translation layer removed. Existing analysis behavior, report schemas, finding IDs,
 layout and themes are preserved. Upgrade compatibility and provenance are documented
-in `UPGRADING.md` and `NOTICE`; current checks are in `MIGRATION_REPORT.md`.
+in `UPGRADING.md` and `NOTICE`; current checks are in [RELEASE.md](RELEASE.md).
 
 ## v4.4 — 2026-09-21
 
