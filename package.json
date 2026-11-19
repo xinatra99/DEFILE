@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node scripts/build-live.mjs",
     "preview": "node scripts/preview-live.mjs",
-    "test:live": "node --test tests/live_adapter.test.mjs tests/live_bundle.test.mjs"
+    "test:live": "node --test tests/live_adapter.test.mjs tests/live_bundle.test.mjs tests/live_navigation.test.mjs"
   },
   "engines": { "node": "24.x" }
 }

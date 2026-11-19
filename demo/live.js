@@ -105,16 +105,30 @@
       const header=document.querySelector('header .brand');header.append(label('Sample data'));
       let scheduled=false;new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(()=>{scheduled=false;enhance();});}}).observe(document.body,{childList:true,subtree:true});
       enhance();
-      const params=new URLSearchParams(location.hash.slice(1)),id=params.get('scan');
-      app.select(adapter.data.jobs.some(j=>j.id===id)?id:'sample-original');
-      const tab=params.get('tab');if(['dashboard','findings','binaries','scripts','files','components','busybox','services','strings','sensitive','ai','reports'].includes(tab))app.tab=tab;
+      // Import old shared links once; ordinary navigation stays in this session.
+      const params=new URLSearchParams(location.hash.slice(1));
+      let saved;try{saved=JSON.parse(storage.getItem('navigation'));}catch{}
+      const navigation=['scan','tab','view'].some(key=>params.has(key))
+        ? Object.fromEntries(params) : (saved&&typeof saved==='object'?saved:{});
+      if(location.hash)history.replaceState(history.state,'',location.pathname+location.search);
+      const skip=document.querySelector('.skip-link');
+      skip?.addEventListener('click',event=>{event.preventDefault();app.focusWorkspace();});
+      const id=navigation.scan;
+      await app.select(adapter.data.jobs.some(j=>j.id===id)?id:'sample-original');
+      const tab=navigation.tab;if(['dashboard','findings','binaries','scripts','files','components','busybox','services','strings','sensitive','ai','reports'].includes(tab))app.tab=tab;
       if(tab==='ai')await app.loadAIAnalysis();
-      if(params.get('view')==='cve')app.toggleVulnDB();
-      else if(params.get('view')==='compare')app.toggleCompare();
-      else if(params.get('view')==='dictionary')app.toggleSensitiveDict();
-      const sync=()=>{const p=new URLSearchParams({scan:app.selectedId||'sample-original',tab:app.tab});if(app.showVulnDB)p.set('view','cve');else if(app.compareMode)p.set('view','compare');else if(app.showSensitiveDict)p.set('view','dictionary');history.replaceState(null,'','#'+p);};
-      for(const key of ['selectedId','tab','showVulnDB','compareMode','showSensitiveDict'])app.$watch(key,sync);
-      sync();
+      const eligible=app.completedJobs;
+      for(const key of ['compareA','compareB'])if(eligible.some(j=>j.id===navigation[key]))app[key]=navigation[key];
+      if(navigation.view==='cve')app.toggleVulnDB();
+      else if(navigation.view==='compare')app.toggleCompare();
+      else if(navigation.view==='dictionary')app.toggleSensitiveDict();
+      const saveNavigation=()=>storage.setItem('navigation',JSON.stringify({
+        scan:app.selectedId,tab:app.tab,
+        view:app.showVulnDB?'cve':app.compareMode?'compare':app.showSensitiveDict?'dictionary':'',
+        compareA:app.compareA,compareB:app.compareB,
+      }));
+      for(const key of ['selectedId','tab','showVulnDB','compareMode','showSensitiveDict','compareA','compareB'])app.$watch(key,saveNavigation);
+      saveNavigation();
     }
   };
 })();
