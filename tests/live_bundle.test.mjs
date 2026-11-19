@@ -10,7 +10,7 @@ test('static bundle has shared UI, recorded data, disclosures, licenses and no r
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.match(html,/DEFILE Live/);assert.match(html,/demo\/live.js/);assert.match(html,/Illustrative pseudocode/);
   assert.equal(fs.readFileSync(path.join(root,'workbench.js'),'utf8'),fs.readFileSync(new URL('../service/web/workbench.js',import.meta.url),'utf8'));
   for(const file of files(root)){
-    assert.doesNotMatch(file,/[\\/](?:\.tools|\.validation|\.venv|\.git)[\\/]|users\.json$|ai\.key$|reports\.db$|\.elf$|\.exe$/);
+    assert.doesNotMatch(path.sep+path.relative(root,file),/[\\/](?:\.tools|\.validation|\.venv|\.git)[\\/]|users\.json$|ai\.key$|reports\.db$|\.elf$|\.exe$/);
     if(/\.(json|js|html|md|txt)$/.test(file)){const text=fs.readFileSync(file,'utf8');assert.doesNotMatch(text,/C:[\\/]Users[\\/]|\/mnt\/c\/Users\/|\/home\/[^/]+\/|BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|Defile-[A-Za-z0-9_-]{16}/);}
   }
 });
