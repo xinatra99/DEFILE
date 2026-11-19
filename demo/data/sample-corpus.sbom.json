@@ -1,0 +1,3067 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:8c70bb72-58ff-4762-9d79-ed2286c4dc4e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-19T06:50:06.904767+00:00",
+    "tools": [
+      {
+        "vendor": "defile",
+        "name": "defile",
+        "version": "2.8.0+defile.2"
+      }
+    ],
+    "component": {
+      "type": "firmware",
+      "name": "samples/sample-corpus"
+    },
+    "properties": [
+      {
+        "name": "defile:demonstration",
+        "value": "Engine-generated heuristic results. No vendor firmware or OpenSSL library is bundled; version-banner CVE matches are demonstration signals, not vulnerability discoveries."
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "openssl",
+      "version": "1.0.1f",
+      "bom-ref": "openssl@1.0.1f",
+      "purl": "pkg:generic/openssl@1.0.1f"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2014-0160",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "description": "Heartbleed: TLS heartbeat OOB read",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2016-2107",
+      "bom-ref": "openssl@1.0.1f",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "description": "OpenSSL AES-NI CBC padding oracle",
+      "affects": [
+        {
+          "ref": "openssl@1.0.1f"
+        }
+      ]
+    }
+  ]
+}

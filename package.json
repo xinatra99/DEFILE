@@ -1,0 +1,11 @@
+{
+  "name": "defile-live",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-live.mjs",
+    "preview": "node scripts/preview-live.mjs",
+    "test:live": "node --test tests/live_adapter.test.mjs tests/live_bundle.test.mjs"
+  },
+  "engines": { "node": "24.x" }
+}

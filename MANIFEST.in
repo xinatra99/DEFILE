@@ -1,0 +1,8 @@
+include LICENSE NOTICE README.md ENVIRONMENT.md UPGRADING.md MIGRATION_REPORT.md
+include STAGE1_ACCEPTANCE.md
+include PRODUCT.md DESIGN.md STAGE2A_IMPLEMENTATION.md
+include LIVE_DEMO.md STAGE3_IMPLEMENTATION.md
+include STAGE35_USABILITY.md
+include firmware-analysis-requirements.md CHANGELOG.md PROGRESS.md
+recursive-include defile/data *.json
+recursive-include defile/re/ghidra_scripts *.py

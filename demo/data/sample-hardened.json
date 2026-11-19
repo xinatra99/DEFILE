@@ -1,0 +1,385 @@
+{
+  "target": "samples/sample-hardened",
+  "binaries": [
+    {
+      "path": "samples/sample-hardened/bin/probe",
+      "sha256": "57890f9f34571968497cce23817baab96c6e73b6ea13694cb10ad7a4aec4177c",
+      "md5": "d8ed9ba80e916d227cbcde83967726be",
+      "format": "elf",
+      "arch": "x86_64",
+      "endian": "little",
+      "bits": 64,
+      "abi": "sysv",
+      "libc": "glibc",
+      "is_library": false,
+      "mitigations": {
+        "nx": true,
+        "canary": true,
+        "relro": "full",
+        "pie": true,
+        "fortify": false,
+        "stripped": false
+      },
+      "imports": [
+        "_ITM_deregisterTMCloneTable",
+        "_ITM_registerTMCloneTable",
+        "__cxa_finalize",
+        "__cxa_finalize@GLIBC_2.2.5",
+        "__gmon_start__",
+        "__libc_start_main",
+        "__libc_start_main@GLIBC_2.34",
+        "__stack_chk_fail",
+        "__stack_chk_fail@GLIBC_2.4",
+        "puts",
+        "puts@GLIBC_2.2.5",
+        "snprintf",
+        "snprintf@GLIBC_2.2.5"
+      ],
+      "exports": [
+        "_IO_stdin_used",
+        "__TMC_END__",
+        "__dso_handle",
+        "_fini",
+        "_init",
+        "_start",
+        "main",
+        "sample_copy"
+      ],
+      "functions": [
+        {
+          "name": "_init",
+          "address": 4096,
+          "size": 27,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "575ddedc6cc30841"
+        },
+        {
+          "name": "sub_1060",
+          "address": 4192,
+          "size": 16,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "0b31eeff3480a7d0"
+        },
+        {
+          "name": "sub_1070",
+          "address": 4208,
+          "size": 16,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "0b31eeff3480a7d0"
+        },
+        {
+          "name": "sub_1080",
+          "address": 4224,
+          "size": 16,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "0b31eeff3480a7d0"
+        },
+        {
+          "name": "sub_1090",
+          "address": 4240,
+          "size": 16,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "0b31eeff3480a7d0"
+        },
+        {
+          "name": "_start",
+          "address": 4256,
+          "size": 48,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "43be67d26555f4a7"
+        },
+        {
+          "name": "deregister_tm_clones",
+          "address": 4304,
+          "size": 48,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "988105c4799e4301"
+        },
+        {
+          "name": "register_tm_clones",
+          "address": 4352,
+          "size": 64,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "350eb9bbdfdeaf3f"
+        },
+        {
+          "name": "__do_global_dtors_aux",
+          "address": 4416,
+          "size": 64,
+          "calls": [
+            "deregister_tm_clones"
+          ],
+          "callees_imported": [],
+          "fingerprint": "205618f045621287"
+        },
+        {
+          "name": "frame_dummy",
+          "address": 4480,
+          "size": 9,
+          "calls": [],
+          "callees_imported": [],
+          "fingerprint": "5d01be73cec95531"
+        },
+        {
+          "name": "sample_copy",
+          "address": 4489,
+          "size": 120,
+          "calls": [
+            "snprintf",
+            "puts",
+            "__stack_chk_fail"
+          ],
+          "callees_imported": [
+            "snprintf",
+            "puts",
+            "__stack_chk_fail"
+          ],
+          "fingerprint": "08f6541431ea1c0b"
+        },
+        {
+          "name": "main",
+          "address": 4609,
+          "size": 45,
+          "calls": [
+            "puts",
+            "sample_copy"
+          ],
+          "callees_imported": [
+            "puts"
+          ],
+          "fingerprint": "34b81f26413137f7"
+        }
+      ],
+      "strings": [
+        "/lib64/ld-linux-x86-64.so.2",
+        "snprintf",
+        "puts",
+        "__stack_chk_fail",
+        "__libc_start_main",
+        "__cxa_finalize",
+        "libc.so.6",
+        "GLIBC_2.4",
+        "GLIBC_2.2.5",
+        "GLIBC_2.34",
+        "_ITM_deregisterTMCloneTable",
+        "__gmon_start__",
+        "_ITM_registerTMCloneTable",
+        "PTE1",
+        "u+UH",
+        "OpenSSL 1.0.2h ",
+        " synthetic version-banner fixture",
+        "DEFILE educational fixture",
+        "9*3$\"",
+        "GCC: (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+        "Scrt1.o",
+        "__abi_tag",
+        "crtstuff.c",
+        "deregister_tm_clones",
+        "__do_global_dtors_aux",
+        "completed.0",
+        "__do_global_dtors_aux_fini_array_entry",
+        "frame_dummy",
+        "__frame_dummy_init_array_entry",
+        "probe.c",
+        "banner",
+        "__FRAME_END__",
+        "_DYNAMIC",
+        "__GNU_EH_FRAME_HDR",
+        "_GLOBAL_OFFSET_TABLE_",
+        "__libc_start_main@GLIBC_2.34",
+        "_ITM_deregisterTMCloneTable",
+        "puts@GLIBC_2.2.5",
+        "_edata",
+        "_fini",
+        "__stack_chk_fail@GLIBC_2.4",
+        "snprintf@GLIBC_2.2.5",
+        "__data_start",
+        "__gmon_start__",
+        "__dso_handle",
+        "_IO_stdin_used",
+        "sample_copy",
+        "_end",
+        "__bss_start",
+        "main",
+        "__TMC_END__",
+        "_ITM_registerTMCloneTable",
+        "__cxa_finalize@GLIBC_2.2.5",
+        "_init",
+        ".symtab",
+        ".strtab",
+        ".shstrtab",
+        ".note.gnu.build-id",
+        ".interp",
+        ".gnu.hash",
+        ".dynsym",
+        ".dynstr",
+        ".gnu.version",
+        ".gnu.version_r",
+        ".rela.dyn",
+        ".rela.plt",
+        ".init",
+        ".plt.got",
+        ".plt.sec",
+        ".text",
+        ".fini",
+        ".rodata",
+        ".eh_frame_hdr",
+        ".eh_frame",
+        ".note.gnu.property",
+        ".note.ABI-tag",
+        ".init_array",
+        ".fini_array",
+        ".dynamic",
+        ".data",
+        ".bss",
+        ".comment"
+      ],
+      "warnings": [
+        "cve-bin-tool unavailable or disabled (required dependency; pip install cve-bin-tool) \u2014 CVE coverage limited to the small built-in banner DB"
+      ]
+    }
+  ],
+  "scripts": [
+    {
+      "path": "samples/sample-hardened/etc/init.d/S10sample",
+      "kind": "shell",
+      "findings": 0,
+      "sha256": "cacd6586ed8d44faced43b463c907a813ac5f5e1dcd53080f0886adb04f3c142",
+      "md5": "a1c109d9ab7ad9015c5e5439681eb8b9"
+    }
+  ],
+  "components": [
+    {
+      "name": "openssl",
+      "version": "1.0.2h",
+      "binaries": [
+        "samples/sample-hardened/bin/probe"
+      ],
+      "cve_ids": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "3d2eee3cbd2efe9c",
+      "title": "Startup/service script: S10sample",
+      "vuln_class": "init_script",
+      "severity": "info",
+      "confidence": 0.6,
+      "component": "/etc/init.d/S10sample",
+      "rule": "fs-hardening",
+      "description": "/etc/init.d/S10sample runs at boot/service start; review the services it launches as part of the attack surface.",
+      "remediation": "Disable unnecessary services.",
+      "cve_ids": [],
+      "evidence": [
+        {
+          "binary": "samples/sample-hardened/etc/init.d/S10sample",
+          "function": "",
+          "address": 0,
+          "snippet": "-rwxr-xr-x",
+          "taint_path": []
+        }
+      ],
+      "triage": "new",
+      "pseudocode": ""
+    }
+  ],
+  "files": [
+    {
+      "path": "samples/sample-hardened/bin/probe",
+      "kind": "binary",
+      "size": 16120,
+      "md5": "d8ed9ba80e916d227cbcde83967726be",
+      "strings": []
+    },
+    {
+      "path": "samples/sample-hardened/etc/init.d/S10sample",
+      "kind": "script",
+      "size": 105,
+      "md5": "a1c109d9ab7ad9015c5e5439681eb8b9",
+      "strings": [
+        "#!/bin/sh",
+        "# Sample only; recording does not execute this script.",
+        "echo \"DEFILE sample startup\"",
+        "/bin/probe"
+      ]
+    },
+    {
+      "path": "samples/sample-hardened/etc/config/device.conf",
+      "kind": "config",
+      "size": 80,
+      "md5": "052c288f139b93bcd0ea39c1e6da675e",
+      "strings": [
+        "# Educational fixture, no real device",
+        "device_name=DEFILE Sample",
+        "telnet_enable=0"
+      ]
+    },
+    {
+      "path": "samples/sample-hardened/usr/share/README.txt",
+      "kind": "other",
+      "size": 136,
+      "md5": "9560f6c436f582884a79d83b46786323",
+      "strings": [
+        "Project-authored educational fixture. Version banners are synthetic test signals; no vendor firmware or third-party library is bundled."
+      ]
+    }
+  ],
+  "busybox_audit": {
+    "has_busybox": false,
+    "busybox_paths": [],
+    "compiled_in": [],
+    "missing": [],
+    "extra_commands": [],
+    "init_scripts": [
+      {
+        "path": "samples/sample-hardened/etc/init.d/S10sample",
+        "content": "#!/bin/sh\n# Sample only; recording does not execute this script.\necho \"DEFILE sample startup\"\n/bin/probe\n",
+        "truncated": false
+      }
+    ],
+    "truncated_extra": false,
+    "truncated_init": false
+  },
+  "services": [],
+  "tool_version": "2.8.0+defile.2",
+  "generated_at": "2026-11-19T06:50:03.976244+00:00",
+  "kernel_version": "",
+  "arch_summary": "x86_64",
+  "endian_summary": "little",
+  "file_count": 4,
+  "firmware_size": 16441,
+  "cert_count": 0,
+  "rsa_cert_count": 0,
+  "dir_breakdown": [
+    {
+      "name": "/bin",
+      "bytes": 16120,
+      "pct": 98.0475640167873
+    },
+    {
+      "name": "/etc",
+      "bytes": 185,
+      "pct": 1.1252356912596557
+    },
+    {
+      "name": "/usr",
+      "bytes": 136,
+      "pct": 0.8272002919530442
+    }
+  ],
+  "dir_chart_renderer": "",
+  "demo_provenance": {
+    "recorded": true,
+    "educational_fixture": true,
+    "synthetic_version_banners": true,
+    "notice": "Engine-generated heuristic results. No vendor firmware or OpenSSL library is bundled; version-banner CVE matches are demonstration signals, not vulnerability discoveries."
+  }
+}

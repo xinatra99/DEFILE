@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "defile"
+version = "2.8.0+defile.2"
+description = "Self-hosted firmware reverse engineering and security analysis"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+dependencies = [
+    "capstone>=4.0",
+    "pyelftools>=0.29",
+    # GPL-3.0 dependency installed separately. Broad scans use a subprocess;
+    # checker/database metadata helpers also use the installed Python package.
+    # The dependency retains its own license and is not bundled with Live.
+    "cve-bin-tool>=3.4",
+    "cryptography>=41.0",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+# Heavier engines wrapped opportunistically; the core degrades gracefully without them.
+taint = ["angr>=9.2"]
+# GPU-accelerated rootfs dir-breakdown pie chart rendering. Optional: the
+# renderer probes for a usable CUDA device at runtime and falls back to CPU
+# (Pillow, already a core dependency) automatically when this isn't
+# installed or no GPU is present. Pick the cupy wheel matching the local
+# CUDA toolkit version, e.g. cupy-cuda12x for CUDA 12.x.
+cuda = ["cupy-cuda12x>=12.0"]
+
+[project.scripts]
+defile = "defile.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["defile*"]
+
+[tool.setuptools.package-data]
+defile = ["data/*.json", "re/ghidra_scripts/*.py"]

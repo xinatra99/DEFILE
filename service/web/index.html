@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="compat-storage.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="DEFILE: self-hosted firmware reverse engineering and security analysis.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>DEFILE — Firmware Reverse Engineering and Security Analysis</title>
+<script>
+  // Apply the saved theme before first paint to avoid a flash of the default.
+  document.documentElement.setAttribute(
+    "data-theme", localStorage.getItem("defile-theme") || "midnight");
+
+</script>
+<link rel="stylesheet" href="/workbench.css">
+<link rel="stylesheet" href="/evidence.css">
+</head>
+<body x-data="app()" x-init="init()" @keydown.escape.window="escapeUI()">
+<a class="skip-link" href="#research-workspace">Skip to research workspace</a>
+<!-- LOGIN -->
+<div class="loginOverlay" x-show="showLogin" style="display:none" x-effect="showLogin && refreshCaptcha()">
+  <div class="loginTopBar">
+    <select class="themesel" x-model="theme" @change="applyTheme()" title="Theme">
+      <option value="midnight">Graphite</option>
+      <option value="ocean">Ocean</option>
+      <option value="forest">Forest</option>
+      <option value="dusk">Dusk</option>
+      <option value="rose">Rose</option>
+      <option value="nord">Nord</option>
+      <option value="light">Light</option>
+    </select>
+  </div>
+  <form class="loginCard" aria-label="Sign in to DEFILE" @submit.prevent="doLogin()">
+    <div class="login-brand"><div class="loginMark">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 4 5.5v6c0 5 3.4 8.5 8 9.5 4.6-1 8-4.5 8-9.5v-6L12 2Z"/>
+        <path d="M9.5 12.2 11.3 14l3.4-4"/>
+      </svg>
+    </div><h2>DEFILE</h2></div>
+    <p class="loginFullname">Firmware research workbench</p>
+    <p class="tag">Sign in to your research workspace.</p>
+    <input type="text" x-model="loginUser" :placeholder="'Username'" autocomplete="username" autofocus>
+    <input type="password" x-model="loginPass" :placeholder="'Password'" autocomplete="current-password">
+    <div class="captchaRow" x-show="captchaImg">
+      <img :src="captchaImg" :alt="'Enter the digits shown'" @click="refreshCaptcha()" :title="'Click to get a new code'">
+      <input type="text" x-model="captchaAnswer" :placeholder="'Enter the digits shown'" autocomplete="off" maxlength="8">
+    </div>
+    <button type="submit" x-text="'Sign in'"></button>
+    <p class="sev-crit" x-show="loginError" x-text="loginError"></p>
+  </form>
+</div>
+<!-- CHANGE PASSWORD -->
+<div class="loginOverlay" x-show="showChangePassword" style="display:none" @click.self="showChangePassword=false">
+  <form class="loginCard" @submit.prevent="doChangePassword()">
+    <button type="button" class="modalClose" @click="showChangePassword=false" title="Close">×</button>
+    <div class="login-brand"><div class="loginMark">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="7.5" cy="15.5" r="4.5"/>
+        <path d="M11 12 20 3"/>
+        <path d="M16 7l3 3"/>
+      </svg>
+    </div><h2 x-text="'Change password'"></h2></div>
+    <p class="tag" x-text="'Choose a new password for your account.'"></p>
+    <input type="password" x-model="oldPassword" :placeholder="'Current password'" autocomplete="current-password" autofocus>
+    <input type="password" x-model="newPassword" :placeholder="'New password (min 8 characters)'" autocomplete="new-password">
+    <input type="password" x-model="newPassword2" :placeholder="'Confirm new password'" autocomplete="new-password">
+    <button type="submit" x-text="'Update password'"></button>
+    <p class="sev-crit" x-show="changePasswordError" x-text="changePasswordError"></p>
+    <p class="sev-low" x-show="changePasswordOk" x-text="'Password updated.'"></p>
+  </form>
+</div>
+<!-- AI SETTINGS -->
+<div class="loginOverlay" x-show="showAISettings" style="display:none" @click.self="closeAISettings()">
+  <div class="modalCard">
+    <button type="button" class="modalClose" @click="closeAISettings()" title="Close">×</button>
+    <h2 x-text="'AI providers'"></h2>
+    <p class="tag" x-text="'Register one or more OpenAI-compatible endpoints (self-hosted gateways like one-api/newapi/vLLM/Ollama, or a vendor API) to use for AI-assisted analysis of scan results.'"></p>
+
+    <template x-if="!aiProviders.length">
+      <div class="empty" x-text="'No providers saved yet — add one below.'"></div>
+    </template>
+    <template x-for="p in aiProviders" :key="p.id">
+      <div class="aiProviderRow">
+        <div class="aiProviderMeta">
+          <div class="name">
+            <span x-text="p.name"></span>
+            <span class="fr mono" style="margin-left:6px" x-text="p.kind==='anthropic' ? 'Anthropic' : 'OpenAI'"></span>
+          </div>
+          <div class="sub" x-text="p.host + ' · ' + p.model + ' · max_tokens=' + p.max_tokens + ' · ***' + p.key_last4"></div>
+          <div class="sub" x-show="aiTestResults[p.id]" :class="aiTestResults[p.id] && aiTestResults[p.id].ok ? 'sev-low' : 'sev-crit'"
+               x-text="aiTestResults[p.id] && aiTestResults[p.id].text"></div>
+        </div>
+        <button class="ghost sm" @click="testAIProvider(p)" :disabled="!!aiTesting[p.id]"
+                x-text="aiTesting[p.id] ? 'Testing…' : 'Test connection'"></button>
+        <button class="ghost sm" @click="editAIProvider(p)" x-text="'Edit'"></button>
+        <button class="ghost sm" @click="deleteAIProvider(p)" x-text="'Delete'"></button>
+      </div>
+    </template>
+
+    <template x-if="!aiFormOpen">
+      <button class="ghost sm" style="margin-top:12px" @click="newAIProvider()" x-text="'+ Add provider'"></button>
+    </template>
+
+    <div class="aiForm" x-show="aiFormOpen">
+      <input type="text" x-model="aiForm.name" :placeholder="'Display name (e.g. \u0022Self-hosted gateway\u0022)'">
+      <select x-model="aiForm.kind">
+        <option value="openai" x-text="'OpenAI-compatible'"></option>
+        <option value="anthropic" x-text="'Anthropic (Claude)'"></option>
+      </select>
+      <input type="text" x-model="aiForm.host" :placeholder="aiForm.kind==='anthropic' ? 'Host URL (e.g. https://api.anthropic.com/v1)' : 'Host URL (e.g. https://gw.example.com/v1)'">
+      <p class="meta" style="margin:0" x-text="aiForm.kind==='anthropic' ? 'x-api-key auth, /messages -- for Anthropic\u0027s own API. Host should include the version path, e.g. https://api.anthropic.com/v1.' : 'Bearer-token auth, /chat/completions -- works with OpenAI, DeepSeek, and self-hosted gateways (one-api/newapi/vLLM/Ollama).'"></p>
+      <input type="password" x-model="aiForm.api_key" :placeholder="aiForm.id ? 'API Key (leave blank to keep current)' : 'API Key'" autocomplete="off">
+      <div class="row">
+        <div class="field-wrap" style="flex:1"><label class="form-label" for="ai-model">Model</label><select id="ai-model" x-model="aiForm.model">
+          <option value="" x-text="'Fetch models to choose one…'"></option>
+          <template x-for="m in aiFormModels" :key="m">
+            <option :value="m" x-text="m"></option>
+          </template>
+        </select></div>
+        <button class="ghost sm" @click="fetchAIModelsForForm()" :disabled="aiFormFetching || !aiForm.host || (!aiForm.api_key && !aiForm.id)"
+                x-text="aiFormFetching ? 'Fetching…' : 'Fetch models'"></button>
+      </div>
+      <div class="row" style="align-items:center">
+        <div class="field-wrap" style="flex:1"><label class="form-label" for="ai-token-limit">Maximum output tokens</label><input id="ai-token-limit" type="number" x-model.number="aiForm.max_tokens" min="256" max="65536" step="256" :placeholder="'Max output tokens (default 8192)'"></div>
+        <span class="meta" style="margin:0;white-space:nowrap" x-text="'Too low truncates long analyses mid-sentence.'"></span>
+      </div>
+      <p class="sev-crit" x-show="aiFormError" x-text="aiFormError"></p>
+      <div class="row">
+        <button @click="saveAIProvider()" :disabled="!aiForm.name || !aiForm.host || !aiForm.model" x-text="'Save'"></button>
+        <button class="ghost" @click="closeAIForm()" x-text="'Cancel'"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<header aria-label="Application">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 4 5.5v6c0 5 3.4 8.5 8 9.5 4.6-1 8-4.5 8-9.5v-6L12 2Z"/>
+      <path d="M9.5 12.2 11.3 14l3.4-4"/>
+    </svg>
+    <h1>DEFILE</h1><span class="brand-description" x-text="isDemo ? 'Interactive demo' : 'Self-hosted Full'"></span>
+  </div>
+  <div class="vrule" x-show="selJob"></div>
+  <div class="scanctx" x-show="selJob">
+    <span class="name" :title="selJob ? selJob.target : ''" x-text="scanName(selJob)"></span>
+    <template x-for="c in headerFacts()" :key="c"><span class="hchip" x-text="c"></span></template>
+  </div>
+  <span class="spacer"></span>
+  <nav class="segnav" aria-label="Workspace tools">
+    <button :class="{active: compareMode}" :aria-pressed="compareMode" aria-label="Compare scans" @click="toggleCompare()" :title="'Compare scans'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v18"/><path d="M16 3v18"/><path d="M3 8h5"/><path d="M16 8h5"/><path d="M3 16h5"/><path d="M16 16h5"/></svg>
+      <span class="nav-label-wide" x-text="'Compare scans'"></span><span class="nav-label-compact" aria-hidden="true">Compare</span>
+    </button>
+    <button :class="{active: showVulnDB}" :aria-pressed="showVulnDB" aria-label="CVE library" @click="toggleVulnDB()" :title="'CVE database'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+      <span class="nav-label-wide" x-text="'CVE library'"></span><span class="nav-label-compact" aria-hidden="true">CVEs</span>
+    </button>
+    <button :class="{active: showSensitiveDict}" :aria-pressed="showSensitiveDict" @click="toggleSensitiveDict()" :title="'Sensitive dictionary'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5Z"/><path d="M8 7h8"/><path d="M8 11h5"/></svg>
+      <span x-text="'Dictionary'"></span>
+    </button>
+    <button :class="{active: showAISettings}" @click="openAISettings()" :title="'AI settings'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2.5"/></svg>
+      <span x-text="'AI settings'"></span>
+    </button>
+  </nav>
+  <div class="vrule"></div>
+  <div class="usermenu" x-data="{}" @click.outside="showUserMenu=false">
+    <button class="ghost sm usermenu-btn" :class="{active: showUserMenu}" @click="showUserMenu=!showUserMenu">
+      <span class="usermenu-avatar" x-show="username||actor" x-text="(username||actor).slice(0,2)"></span>
+      <span x-text="username||actor||'User center'"></span>
+      <span class="caret" x-text="showUserMenu?'▴':'▾'"></span>
+    </button>
+    <div class="usermenu-dropdown" x-show="showUserMenu" style="display:none" x-transition>
+      <div class="usermenu-hdr" x-show="loginRequired && authToken">
+        <span x-text="'Signed in as'"></span>
+        <strong x-text="username||'—'"></strong>
+      </div>
+      <!-- These preferences are set once and then left alone, so they live here
+           instead of taking up header width on every screen. -->
+      <div class="usermenu-field">
+        <label for="actorbox" x-text="'Display name for triage log'"></label>
+        <input id="actorbox" type="text" x-model="actor" @change="savePreference('defile-actor', actor)"
+               :placeholder="'your name (for triage log)'" :title="'Attached to triage actions so the audit log shows who did what.'">
+      </div>
+      <div class="usermenu-field">
+        <label for="themesel" x-text="'Theme'"></label>
+        <select id="themesel" class="themesel" style="width:100%" x-model="theme" @change="applyTheme()">
+          <option value="midnight">Graphite</option>
+          <option value="ocean">Ocean</option>
+          <option value="forest">Forest</option>
+          <option value="dusk">Dusk</option>
+          <option value="rose">Rose</option>
+          <option value="nord">Nord</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+      <template x-if="loginRequired && authToken">
+        <div>
+          <div class="usermenu-sep"></div>
+          <button type="button" style="width:100%" @click="showUserMenu=false; openChangePassword()" x-text="'Change password'"></button>
+          <button type="button" style="width:100%" @click="showUserMenu=false; doLogout()" x-text="'Sign out'"></button>
+        </div>
+      </template>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-toolbar">
+  <button class="ghost" @click="mobileScans=!mobileScans" :aria-expanded="mobileScans" aria-controls="scan-sidebar"><span x-text="mobileScans ? 'Close scans' : 'Scans & new analysis'"></span><span class="count-pill" x-text="jobs.length"></span></button>
+  <span class="muted" x-text="selJob ? scanName(selJob) : 'Workspace'"></span>
+</div>
+<button class="drawer-shade" x-show="mobileScans" @click="mobileScans=false" aria-label="Close scan panel" style="display:none"></button>
+<main>
+  <!-- LEFT: submit + job list -->
+  <aside class="left" id="scan-sidebar" :class="{'is-open':mobileScans}" aria-label="Analysis submission and scans">
+    <div class="sample-intro" x-show="isDemo"><h2>Explore DEFILE</h2><p>Choose a recorded sample below. Start with the original, review its findings, then compare the hardened version.</p><span class="chip neutral">Interactive demo · no live execution</span></div>
+    <details class="railhead submission-panel" :open="!isDemo">
+      <summary><h2 x-text="isDemo ? 'Analysis controls' : 'New analysis'"></h2><span class="muted" x-show="isDemo">Requires Full</span></summary>
+      <p class="input-guidance" x-text="isDemo ? 'These controls show the Full workflow. Explore stored results by choosing a sample below.' : 'Analyze a Linux binary or extracted filesystem. For a packed firmware image, extract it first.'"></p>
+      <label class="field-label" for="analysis-target">Path on the analysis server</label>
+      <input id="analysis-target" type="text" x-model="target" :placeholder="'/path/to/binary or extracted rootfs'" @keydown.enter="submit()" spellcheck="false">
+      <p class="field-hint" x-show="!isDemo">Use a path on the machine running DEFILE, or upload a binary below. Uploading starts analysis immediately.</p>
+      <div class="submit-actions">
+        <button @click="submit()" :disabled="!target.trim()" x-text="'Analyze'"></button>
+        <button class="ghost" @click="$refs.firmwareUpload.click()" :disabled="uploading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M4 17v3h16v-3"/></svg><span x-text="uploading ? 'Uploading…' : 'Upload file'"></span></button>
+        <input x-ref="firmwareUpload" type="file" @change="upload($event)" aria-label="Upload firmware or binary" hidden>
+      </div>
+      <div class="railopts">
+        <button class="ghost sm" @click="submitExtract()" :disabled="!moriaVersion || !target.trim()" :title="moriaVersion ? 'Identify and extract firmware regions · '+moriaVersion : 'Install Moria to enable extraction.'">Extract firmware</button>
+        <button type="button" class="help-button" aria-label="About firmware extraction" data-help="Extraction unpacks supported firmware containers into regions. Choose a usable filesystem region, then select Start analysis. It does not execute the firmware."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6v.5"/></svg></button>
+        <span class="tool-status" :class="moriaVersion ? 'available' : ''" x-text="moriaVersion ? 'Moria ready' : 'Moria unavailable'"></span>
+      </div>
+      <details class="analysis-options"><summary>Analysis options</summary><label><input type="checkbox" x-model="decompile" :disabled="!ghidraAvailable"><span>Ghidra decompilation</span></label><p class="muted" x-text="ghidraAvailable ? 'Enrich findings with decompiled pseudocode.' : 'Ghidra is not installed on this server.'"></p></details>
+    </details>
+
+    <div class="railsec">
+      <span class="hd" x-text="isDemo ? 'Samples' : 'Scans'"></span>
+      <span class="tag num" x-text="jobs.length"></span>
+      <span class="spacer" style="flex:1"></span>
+      <label class="chk" x-show="deletableJobs.length" style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" style="width:auto" :checked="deleteSelected.length && deleteSelected.length===deletableJobs.length"
+               @change="selectAllForDelete()">
+        <span x-text="'Select all'"></span></label>
+      <button class="ghost sm" x-show="deleteSelected.length" @click="deleteSelectedJobs()"
+              x-text="`${'Delete selected'} (${deleteSelected.length})`"></button>
+    </div>
+
+    <div class="scan-search"><input type="search" x-model="scanSearch" aria-label="Search samples or scans" :placeholder="isDemo ? 'Find a sample…' : 'Find a scan…'"><button class="ghost sm" x-show="scanSearch" @click="scanSearch=''">Clear</button></div>
+    <div class="raillist">
+    <div class="rail-empty" x-show="jobs.length && !visibleJobs.length">No matching scans. <button class="ghost sm" @click="scanSearch=''">Clear search</button></div>
+    <template x-if="!jobs.length">
+      <div class="rail-empty"><strong>No scans yet</strong><p>Analyze a local path or upload a binary to begin. Your scans will appear here.</p></div>
+    </template>
+    <template x-for="j in visibleJobs" :key="j.id">
+      <article class="job" :class="{sel: j.id===selectedId}" @click="select(j.id)" tabindex="0" @keydown.enter.self.prevent="select(j.id)" @keydown.space.self.prevent="select(j.id)" :aria-label="scanName(j)+', '+statusLabel(j.status)" :aria-current="j.id===selectedId ? 'true' : null">
+        <div class="row1">
+          <input type="checkbox" x-show="['completed','failed','cancelled'].includes(j.status)"
+                 :checked="deleteSelected.includes(j.id)" @click.stop="toggleDeleteSelect(j.id)"
+                 style="width:auto;flex:none">
+          <span class="dot" :class="j.status"></span>
+          <div class="targetwrap">
+            <div class="target-name" :title="j.target" x-text="targetName(j.target)"></div>
+            
+          </div>
+          
+          <span class="chip neutral" x-show="j.kind==='extract'" x-text="'extract'"></span>
+          <span class="badge" :class="j.status" x-text="statusLabel(j.status)"></span>
+        </div>
+        <div class="bar" x-show="['queued','running','paused'].includes(j.status)"><span :style="`width:${j.progress}%`"></span></div>
+        <div class="meta"><span class="jobid" :title="j.id" x-text="jobIdShort(j.id)"></span>
+          <span x-show="['queued','running'].includes(j.status) && !j.stage" class="spinner sm"></span>
+          <span x-show="['queued','running','paused'].includes(j.status)" style="flex:none;white-space:nowrap"
+                x-text="(j.stage||(j.status==='queued'?'queued, waiting for a worker…':'—'))+' '+j.progress+'%'"></span>
+          <span class="detail" x-show="j.detail && j.status!=='completed'" :title="j.detail" x-text="j.detail"></span>
+          <template x-if="j.status==='completed' && j.kind==='extract'">
+            <span style="display:flex;gap:4px;align-items:center">
+              <span class="chip neutral" x-text="(j.regions||[]).filter(r=>r.usable).length+'/'+(j.regions||[]).length+' '+'usable regions'"></span>
+            </span>
+          </template>
+          <template x-if="j.status==='completed' && j.kind!=='extract'">
+            <span style="display:flex;gap:4px;align-items:center">
+              <span class="chip" :class="j.high_crit>0 ? 'bad' : 'ok'" x-text="j.findings+' '+'findings'"></span>
+              <template x-if="j.high_crit>0"><span class="chip bad" x-text="j.high_crit+' '+'high/crit'"></span></template>
+              <template x-if="j.cache_hit"><span class="chip neutral" x-text="'cached'"></span></template>
+            </span>
+          </template>
+          <span x-show="j.status==='failed'" class="sev-crit" x-text="j.error||statusLabel('failed')"></span>
+          <span class="time-ago" x-text="timeAgo(j.finished_at||j.created_at)"></span>
+        </div>
+        <div class="jobctl" x-show="['queued','running','paused'].includes(j.status)" @click.stop>
+          <button class="ghost sm" x-show="j.status==='running'" @click="pauseJob(j.id)" x-text="'Pause'"></button>
+          <button class="ghost sm" x-show="j.status==='paused'" @click="resumeJob(j.id)" x-text="'Resume'"></button>
+          <button class="ghost sm" @click="stopJob(j.id)" x-text="'Stop'"></button>
+        </div>
+        <div class="jobctl" x-show="['completed','failed','cancelled'].includes(j.status)" @click.stop>
+          <button class="ghost sm" @click="deleteJob(j.id)" x-text="'Delete'"></button>
+          <button class="ghost sm" x-show="j.status==='completed' && j.kind!=='extract'" @click="openAIAnalysisForJob(j.id)" x-text="'AI Analysis'"></button>
+          <button class="ghost sm" @click="rescan(j)" :title="'Re-analyze this target from scratch (bypasses the cache, unlike resubmitting the same path)'" x-text="'Re-scan'"></button>
+        </div>
+        <p class="scan-purpose" x-text="scanHint(j)"></p>
+      </article>
+    </template>
+    </div>
+  </aside>
+
+  <!-- RIGHT: report views -->
+  <section class="right" id="research-workspace" tabindex="-1" aria-label="Research workspace">
+    <div class="workspace-context" x-show="isDemo && demoPreviewReturn"><button class="ghost sm" @click="returnFromPreview()">Back to previous context</button><span class="muted" x-text="demoPreviewReturn ? 'Return to '+demoPreviewReturn.label : ''"></span></div>
+    <div class="workspace-context" x-show="showVulnDB || showSensitiveDict || compareMode"><button class="ghost sm" @click="returnToScan()" x-text="selJob ? 'Back to '+tabLabel() : 'Back to workspace'"></button><span class="muted" x-text="selJob ? scanName(selJob)+' · your scan context is preserved' : 'Workspace tools'"></span></div>
+    <template x-if="selJob && !showVulnDB && !showSensitiveDict && !compareMode">
+      <div class="report-heading">
+        <div class="report-title"><h2 :title="selJob.target" x-text="scanName(selJob)"></h2><span class="badge" :class="selJob.status" x-text="statusLabel(selJob.status)"></span></div>
+        <p class="scan-description" x-text="selJob.kind==='extract' ? 'Firmware extraction · select a usable region to continue with analysis' : 'Static analysis'+(summary ? ' · '+fmtNum(viewSummary.file_count)+' files inspected' : '')+' · '+(selJob.recorded_timeline ? 'completed process record' : 'evidence requires analyst validation')"></p>
+        <details class="target-details"><summary>Target & scan details</summary><div class="target-content"><code x-text="selJob.target"></code><button class="ghost sm" @click="copyTarget()">Copy path</button><span class="mono muted" x-text="selJob.id"></span></div></details>
+      </div>
+    </template>
+    <!-- CVE DATABASE -->
+    <template x-if="showVulnDB">
+      <div class="pane">
+        <h2 x-text="'CVE database'"></h2>
+        <p class="context-copy">Reference coverage for version-based matching. A CVE match is a candidate: verify the exact build, configuration and vendor backports.</p>
+        <p class="sev-crit" x-show="vulnDBError" x-text="vulnDBError"></p>
+        <p class="tag" x-text="'Local vulnerability coverage and curated offline references. Full cve-bin-tool matching requires an enabled scanner and populated local database.'"></p>
+        <template x-if="vulnDBLoading">
+          <div class="loadingBox"><div class="spinner"></div><div x-text="'Loading…'"></div></div>
+        </template>
+        <template x-if="!vulnDBLoading">
+          <div>
+            <div class="vulndb-coverage">
+              <span class="chip" :class="vulnDBCoverage?.available ? 'ok' : 'bad'"
+                    x-text="vulnDBCoverage?.available ? 'cve-bin-tool: available' : 'cve-bin-tool: unavailable (missing or disabled)'"></span>
+              <template x-if="vulnDBCoverage?.available">
+                <span class="tag">
+                  <span x-text="vulnDBCoverage.checker_count"></span>
+                  <span x-text="'components covered'"></span>
+                  (<span x-text="(vulnDBCoverage.data_sources||[]).join(', ')"></span>)
+                </span>
+              </template>
+            </div>
+            <template x-if="vulnDBCoverage?.available">
+              <div class="tag" style="margin-bottom:14px">
+                <span x-text="'CVE entries in the local synced database'"></span>:
+                <strong x-text="(vulnDBCoverage.cve_count_total||0).toLocaleString()"></strong>
+                <template x-if="vulnDBCoverage.cve_counts && Object.keys(vulnDBCoverage.cve_counts).length">
+                  <span>
+                    (<template x-for="(n, src) in vulnDBCoverage.cve_counts" :key="src"><span x-text="src+': '+n.toLocaleString()+'  '"></span></template>)
+                  </span>
+                </template>
+                <br><span x-text="'Too many to list individually (often 10,000s–100,000s per source) — matched against your scan\u0027s actual components instead of browsed here.'"></span>
+              </div>
+            </template>
+            <template x-if="vulnDBCoverage?.available && vulnDBCoverage.checkers?.length">
+              <details class="vulndb-checkers">
+                <summary x-text="'Show covered component checkers'"></summary>
+                <input type="text" class="sm" :placeholder="'Filter…'" x-model="vulnDBCheckerFilter">
+                <div class="checker-chips">
+                  <template x-for="name in filteredCheckers" :key="name">
+                    <span class="chip neutral" x-text="name"></span>
+                  </template>
+                </div>
+              </details>
+            </template>
+
+        <h3 x-text="'Curated fallback database'"></h3>
+            <template x-if="vulnDBRows.length">
+              <div class="table-wrap">
+                <table class="bins">
+                  <thead><tr>
+                    <th x-text="'Component'"></th><th x-text="'CVEs'"></th>
+                    <th x-text="'Severity'"></th><th x-text="'Affected versions'"></th>
+                    <th x-text="'Summary'"></th>
+                  </tr></thead>
+                  <tbody>
+                    <template x-for="row in vulnDBRows" :key="JSON.stringify([row.component,row.cve,row.versionText])">
+                      <tr>
+                        <td x-text="row.component"></td>
+                        <td><a :href="cveUrl(row.cve)" target="_blank" rel="noopener" x-text="row.cve"></a></td>
+                        <td><span class="sevtag" :class="'bg-'+SHORT[row.severity]" x-text="severityLabel(row.severity)"></span></td>
+                        <td x-text="row.versionText"></td>
+                        <td x-text="row.summary"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+            <template x-if="!vulnDBRows.length"><div class="empty" x-text="'No entries in the vulnerability database.'"></div></template>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- SENSITIVE-STRING DICTIONARY (standalone management, independent of any scan) -->
+    <template x-if="showSensitiveDict">
+      <div class="pane">
+        <h2 x-text="'Sensitive dictionary'"></h2>
+        <p class="tag" x-text="'Extracted strings are matched against this keyword dictionary (case-insensitive substring match). Add or remove keywords to tune the search — it\u0027s saved in this browser.'"></p>
+        <div class="kwrow">
+          <template x-for="k in sensitiveKeywords" :key="k">
+            <span class="kwchip"><span x-text="k"></span>
+              <button type="button" @click="removeKeyword(k)" title="remove">×</button></span>
+          </template>
+        </div>
+        <div class="kwadd">
+          <input type="text" x-model="newKeyword" @keydown.enter="addKeyword()"
+                 :placeholder="'add keyword…'">
+          <button class="ghost sm" @click="addKeyword()" x-text="'Add'"></button>
+          <button class="ghost sm" @click="resetKeywords()" x-text="'Reset to defaults'"></button>
+        </div>
+        <p class="meta" x-text="sensitiveKeywords.length+' '+'keywords in the dictionary'"></p>
+      </div>
+    </template>
+
+    <!-- COMPARE -->
+    <template x-if="!showVulnDB && !showSensitiveDict && compareMode">
+      <div class="pane">
+        <h2 x-text="'Compare scans'"></h2>
+        <p class="context-copy">Choose the earlier analysis as A and the newer analysis as B. Changes are shown from A to B; extraction jobs are listed separately in the scan history.</p>
+        <div class="filters compare-pickers">
+          <label><span class="field-label">Baseline · A</span>
+          <select x-model="compareA">
+            <option value="" x-text="'Baseline scan (A)…'"></option>
+            <template x-for="j in completedJobs" :key="j.id">
+              <option :value="j.id" x-text="scanName(j)+' ('+j.id+')'"></option>
+            </template>
+          </select>
+          </label><label><span class="field-label">New analysis · B</span>
+          <select x-model="compareB">
+            <option value="" x-text="'New scan (B)…'"></option>
+            <template x-for="j in completedJobs" :key="j.id">
+              <option :value="j.id" x-text="scanName(j)+' ('+j.id+')'"></option>
+            </template>
+          </select>
+          </label>
+          <button @click="runCompare()" :disabled="!compareA || !compareB || comparing" x-text="'Compare'"></button>
+        </div>
+        <p class="context-copy" x-show="completedJobs.length<2">Complete two analyses to compare their findings, files and functions.</p>
+        <template x-if="comparing">
+          <div class="loadingBox">
+            <div style="width:280px">
+              <div class="bar"><span :style="`width:${compareProgress}%`"></span></div>
+              <div style="text-align:center;margin-top:10px" x-text="'Loading both reports…'+' '+compareProgress+'%'"></div>
+            </div>
+          </div>
+        </template>
+        <template x-if="compareResult">
+          <div>
+            <div class="cards">
+              <div class="card"><div class="n sev-crit" x-text="compareResult.addedTotal"></div><div class="l" x-text="'New findings (in B, not in A)'"></div></div>
+              <div class="card"><div class="n sev-low" x-text="compareResult.removedTotal"></div><div class="l" x-text="'Fixed / removed findings (in A, not in B)'"></div></div>
+              <div class="card"><div class="n" x-text="compareResult.commonCount"></div><div class="l" x-text="'Unchanged (in both)'"></div></div>
+            </div>
+            <h3 x-text="'New findings (in B, not in A)'"></h3>
+            <template x-if="compareResult.addedTotal > compareResult.added.length"><div class="sub" style="margin:0 0 6px" x-text="'⋯ '+compareResult.added.length+' / '+compareResult.addedTotal"></div></template>
+            <template x-if="!compareResult.added.length"><div class="empty" x-text="'None.'"></div></template>
+            <template x-for="(f, fidx) in compareResult.added" :key="f.id+'-'+fidx">
+              <div class="finding" :class="SHORT[f.severity]" x-data="{open:false}">
+                <div class="hd" @click="open=!open">
+                  <span class="sevtag" :class="'bg-'+SHORT[f.severity]" x-text="severityLabel(f.severity)"></span>
+                  <span class="t" x-text="f.title"></span>
+                  <span class="sub" style="margin:0" x-text="f.vuln_class+' · '+Math.round(f.confidence*100)+'%'"></span>
+                  <span x-show="f.cve_ids&&f.cve_ids.length" class="sub" style="margin:0">
+                    <template x-for="(cve, ci) in f.cve_ids" :key="cve">
+                      <span><a :href="cveUrl(cve)" target="_blank" rel="noopener" @click.stop x-text="cve"></a><span x-show="ci < f.cve_ids.length-1">, </span></span>
+                    </template>
+                  </span>
+                  <span x-text="open?'▾':'▸'"></span>
+                </div>
+                <div class="body" x-show="open">
+                  <div class="sub" x-text="'component'+': '+f.component+'  ·  '+'rule'+': '+f.rule+'  ·  '+'id'+': '+f.id"></div>
+                  <div class="desc" x-text="f.description"></div>
+                  <template x-for="(e,i) in (f.evidence||[])" :key="i">
+                    <div class="ev"><span class="loc" x-text="[e.binary,e.function,e.address].filter(Boolean).join(' : ')"></span><br>
+                      <span x-text="e.snippet"></span>
+                      <template x-if="e.taint_path && e.taint_path.length">
+                        <div class="taint" x-text="'↳ '+(e.taint_path||[]).join(' → ')"></div>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="f.pseudocode">
+                    <details>
+                      <summary style="cursor:pointer;color:var(--muted);font-size:13px;margin-top:8px" x-text="'Decompiled pseudocode (Ghidra)'"></summary>
+                      <pre class="code" x-text="f.pseudocode"></pre>
+                    </details>
+                  </template>
+                  <div class="sub" x-show="f.remediation" x-text="'▸ '+f.remediation"></div>
+                </div>
+              </div>
+            </template>
+            <h3 style="margin-top:18px" x-text="'Fixed / removed findings (in A, not in B)'"></h3>
+            <template x-if="compareResult.removedTotal > compareResult.removed.length"><div class="sub" style="margin:0 0 6px" x-text="'⋯ '+compareResult.removed.length+' / '+compareResult.removedTotal"></div></template>
+            <template x-if="!compareResult.removed.length"><div class="empty" x-text="'None.'"></div></template>
+            <template x-for="(f, fidx) in compareResult.removed" :key="f.id+'-'+fidx">
+              <div class="finding" :class="SHORT[f.severity]" x-data="{open:false}">
+                <div class="hd" @click="open=!open">
+                  <span class="sevtag" :class="'bg-'+SHORT[f.severity]" x-text="severityLabel(f.severity)"></span>
+                  <span class="t" x-text="f.title"></span>
+                  <span class="sub" style="margin:0" x-text="f.vuln_class+' · '+Math.round(f.confidence*100)+'%'"></span>
+                  <span x-show="f.cve_ids&&f.cve_ids.length" class="sub" style="margin:0">
+                    <template x-for="(cve, ci) in f.cve_ids" :key="cve">
+                      <span><a :href="cveUrl(cve)" target="_blank" rel="noopener" @click.stop x-text="cve"></a><span x-show="ci < f.cve_ids.length-1">, </span></span>
+                    </template>
+                  </span>
+                  <span x-text="open?'▾':'▸'"></span>
+                </div>
+                <div class="body" x-show="open">
+                  <div class="sub" x-text="'component'+': '+f.component+'  ·  '+'rule'+': '+f.rule+'  ·  '+'id'+': '+f.id"></div>
+                  <div class="desc" x-text="f.description"></div>
+                  <template x-for="(e,i) in (f.evidence||[])" :key="i">
+                    <div class="ev"><span class="loc" x-text="[e.binary,e.function,e.address].filter(Boolean).join(' : ')"></span><br>
+                      <span x-text="e.snippet"></span>
+                      <template x-if="e.taint_path && e.taint_path.length">
+                        <div class="taint" x-text="'↳ '+(e.taint_path||[]).join(' → ')"></div>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="f.pseudocode">
+                    <details>
+                      <summary style="cursor:pointer;color:var(--muted);font-size:13px;margin-top:8px" x-text="'Decompiled pseudocode (Ghidra)'"></summary>
+                      <pre class="code" x-text="f.pseudocode"></pre>
+                    </details>
+                  </template>
+                  <div class="sub" x-show="f.remediation" x-text="'▸ '+f.remediation"></div>
+                </div>
+              </div>
+            </template>
+            <div x-data="{openCommon:false}">
+              <h3 style="margin-top:18px;cursor:pointer" @click="openCommon=!openCommon">
+                <span x-text="'Unchanged (in both)'"></span>
+                <span class="sub" style="margin:0" x-text="'('+compareResult.commonTotal+')'"></span>
+                <span x-text="openCommon?'▾':'▸'"></span>
+              </h3>
+              <template x-if="openCommon">
+                <div>
+                  <template x-if="compareResult.commonTotal > compareResult.common.length"><div class="sub" style="margin:0 0 6px" x-text="'\u22ef '+compareResult.common.length+' / '+compareResult.commonTotal"></div></template>
+                  <template x-if="!compareResult.common.length"><div class="empty" x-text="'None.'"></div></template>
+                  <template x-for="(f, fidx) in compareResult.common" :key="f.id+'-'+fidx">
+                    <div class="finding" :class="SHORT[f.severity]" x-data="{open:false}">
+                      <div class="hd" @click="open=!open">
+                        <span class="sevtag" :class="'bg-'+SHORT[f.severity]" x-text="severityLabel(f.severity)"></span>
+                        <span class="t" x-text="f.title"></span>
+                        <span class="sub" style="margin:0" x-text="f.vuln_class+' \u00b7 '+Math.round(f.confidence*100)+'%'"></span>
+                        <span x-show="f.cve_ids&&f.cve_ids.length" class="sub" style="margin:0">
+                          <template x-for="(cve, ci) in f.cve_ids" :key="cve">
+                            <span><a :href="cveUrl(cve)" target="_blank" rel="noopener" @click.stop x-text="cve"></a><span x-show="ci < f.cve_ids.length-1">, </span></span>
+                          </template>
+                        </span>
+                        <span x-text="open?'\u25be':'\u25b8'"></span>
+                      </div>
+                      <div class="body" x-show="open">
+                        <div class="sub" x-text="'component'+': '+f.component+'  \u00b7  '+'rule'+': '+f.rule+'  \u00b7  '+'id'+': '+f.id"></div>
+                        <div class="desc" x-text="f.description"></div>
+                        <template x-for="(e,i) in (f.evidence||[])" :key="i">
+                          <div class="ev"><span class="loc" x-text="[e.binary,e.function,e.address].filter(Boolean).join(' : ')"></span><br>
+                            <span x-text="e.snippet"></span>
+                            <template x-if="e.taint_path && e.taint_path.length">
+                              <div class="taint" x-text="'\u21b3 '+(e.taint_path||[]).join(' \u2192 ')"></div>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="f.pseudocode">
+                          <details>
+                            <summary style="cursor:pointer;color:var(--muted);font-size:13px;margin-top:8px" x-text="'Decompiled pseudocode (Ghidra)'"></summary>
+                            <pre class="code" x-text="f.pseudocode"></pre>
+                          </details>
+                        </template>
+                        <div class="sub" x-show="f.remediation" x-text="'\u25b8 '+f.remediation"></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            <h3 style="margin-top:18px" x-text="'Binary / script counts'"></h3>
+            <div class="cards">
+              <div class="card"><div class="n" x-text="compareResult.binariesA+' → '+compareResult.binariesB"></div><div class="l" x-text="'Binaries'"></div></div>
+              <div class="card"><div class="n" x-text="compareResult.scriptsA+' → '+compareResult.scriptsB"></div><div class="l" x-text="'Scripts'"></div></div>
+              <div class="card"><div class="n" x-text="compareResult.filesA+' → '+compareResult.filesB"></div><div class="l" x-text="'Files'"></div></div>
+            </div>
+
+            <h3 style="margin-top:18px" x-text="'File changes (by path + MD5)'"></h3>
+            <div class="table-wrap">
+              <table class="bins">
+                <thead><tr><th x-text="'Path'"></th><th x-text="'Status'"></th><th x-text="'MD5'"></th></tr></thead>
+                <tbody>
+                  <template x-for="(x,i) in compareResult.fileDiff.added" :key="'add-'+i">
+                    <tr><td class="path" :title="x.path" x-text="shortPath(x.path)"></td>
+                        <td><span class="chip ok" x-text="'Added'"></span></td>
+                        <td class="path" x-text="x.md5||'—'"></td></tr>
+                  </template>
+                  <template x-for="(x,i) in compareResult.fileDiff.removed" :key="'rem-'+i">
+                    <tr><td class="path" :title="x.path" x-text="shortPath(x.path)"></td>
+                        <td><span class="chip bad" x-text="'Removed'"></span></td>
+                        <td class="path" x-text="x.md5||'—'"></td></tr>
+                  </template>
+                  <template x-for="(x,i) in compareResult.fileDiff.modified" :key="'mod-'+i">
+                    <tr><td class="path" :title="x.path" x-text="shortPath(x.path)"></td>
+                        <td><span class="chip warn" x-text="'Modified'"></span></td>
+                        <td class="path" x-text="(x.md5A||'—')+' → '+(x.md5B||'—')"></td></tr>
+                  </template>
+                </tbody>
+              </table>
+              <template x-if="!compareResult.fileDiff.added.length && !compareResult.fileDiff.removed.length && !compareResult.fileDiff.modified.length">
+                <div class="empty" x-text="'None.'"></div>
+              </template>
+            </div>
+            <p class="meta" x-text="'Unchanged files'+': '+compareResult.fileDiff.unchangedCount"></p>
+
+            <h3 style="margin-top:18px" x-text="'Function changes (same-path binaries, matched by name)'"></h3>
+            <p class="meta" x-text="'Renamed/stripped functions show as one removed + one added, not modified — this matches by name, not BinDiff-style structural matching.'"></p>
+            <template x-if="compareResult.functionDiff.rows.length">
+              <div>
+                <div class="cards">
+                  <div class="card"><div class="n sev-crit" x-text="compareResult.functionDiff.counts.added"></div><div class="l" x-text="'Added'"></div></div>
+                  <div class="card"><div class="n sev-high" x-text="compareResult.functionDiff.counts.removed"></div><div class="l" x-text="'Removed'"></div></div>
+                  <div class="card"><div class="n sev-med" x-text="compareResult.functionDiff.counts.modified"></div><div class="l" x-text="'Modified'"></div></div>
+                  <div class="card"><div class="n" x-text="compareResult.functionDiff.counts.unchanged"></div><div class="l" x-text="'Unchanged'"></div></div>
+                </div>
+                <div class="dirchart" x-show="functionDiffChartUrl">
+                  <img class="dirchart-img" :src="functionDiffChartUrl" alt="">
+                </div>
+                <div class="table-wrap">
+                  <table class="bins">
+                    <thead><tr><th x-text="'Path'"></th><th x-text="'Function'"></th><th x-text="'Status'"></th><th x-text="'Size'"></th><th x-text="'Calls'"></th></tr></thead>
+                    <tbody>
+                      <template x-for="(x,i) in compareResult.functionDiff.rows" :key="i">
+                        <tr>
+                          <td class="path" :title="x.path" x-text="shortPath(x.path)"></td>
+                          <td class="path" x-text="x.name"></td>
+                          <td><span class="chip" :class="{added:'ok', removed:'bad', modified:'warn'}[x.status]" x-text="({added:'Added', removed:'Removed', modified:'Modified', unchanged:'Unchanged'})[x.status]"></span></td>
+                          <td x-text="(x.sizeA??'—')+' → '+(x.sizeB??'—')"></td>
+                          <td x-text="(x.callsA??'—')+' → '+(x.callsB??'—')"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+            <template x-if="!compareResult.functionDiff.rows.length">
+              <div class="empty" x-text="'None.'"></div>
+            </template>
+
+            <h3 style="margin-top:18px" x-text="'String changes'"></h3>
+            <p class="meta" x-text="'Added'+': '+compareResult.stringsAddedTotal+'  ·  '+'Removed'+': '+compareResult.stringsRemovedTotal"></p>
+            <pre class="code" style="max-height:30vh" x-show="compareResult.stringsAdded.length" x-text="compareResult.stringsAdded.map(s=>'+ '+s).join('\n')"></pre>
+            <pre class="code" style="max-height:30vh" x-show="compareResult.stringsRemoved.length" x-text="compareResult.stringsRemoved.map(s=>'- '+s).join('\n')"></pre>
+
+            <h3 style="margin-top:18px" x-text="'Sensitive string changes'"></h3>
+            <template x-if="!compareResult.sensitiveAdded.length && !compareResult.sensitiveRemoved.length">
+              <div class="empty" x-text="'None.'"></div>
+            </template>
+            <pre class="code" style="max-height:30vh" x-show="compareResult.sensitiveAdded.length" x-text="compareResult.sensitiveAdded.map(s=>'+ '+s).join('\n')"></pre>
+            <pre class="code" style="max-height:30vh" x-show="compareResult.sensitiveRemoved.length" x-text="compareResult.sensitiveRemoved.map(s=>'- '+s).join('\n')"></pre>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!showVulnDB && !showSensitiveDict && !compareMode && !selJob">
+      <div class="workspace-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="10" width="28" height="28" rx="4"/><path d="M17 19h14M17 25h9M17 31h6M18 5v5M30 5v5M18 38v5M30 38v5M5 18h5M5 30h5M38 18h5M38 30h5"/></svg><h2>Start an investigation</h2><p>Analyze a binary or extracted filesystem, or use Moria to unpack a firmware image. Select a scan to inspect its findings, evidence and reports.</p><button @click="mobileScans=true; $nextTick(() => document.getElementById('analysis-target').focus())">New analysis</button><div class="workspace-capabilities"><span :class="moriaVersion ? 'available' : 'muted'" x-text="moriaVersion ? 'Moria extraction available' : 'Moria unavailable'"></span><span class="muted" x-text="ghidraAvailable ? 'Ghidra available' : 'Ghidra unavailable'"></span></div></div>
+    </template>
+
+    <template x-if="!showVulnDB && !showSensitiveDict && !compareMode && selJob && selJob.status!=='completed'">
+      <div class="pane progress-pane">
+        <h2 x-text="'Analysis progress'"></h2>
+        <p><span x-text="'Status:'"></span> <span class="badge" :class="selJob.status" x-text="statusLabel(selJob.status)"></span></p>
+        <div class="bar" style="max-width:420px"><span :style="`width:${selJob.progress}%`"></span></div>
+        <p class="meta">
+          <span x-show="['queued','running'].includes(selJob.status) && !selJob.stage" class="spinner sm"></span>
+          <span x-text="(selJob.stage||(selJob.status==='queued'?'queued, waiting for a worker…':''))+' — '+(selJob.detail||'')+' ('+selJob.progress+'%)'"></span>
+        </p>
+        <template x-if="curStageProgress">
+          <div style="max-width:420px;margin-top:4px">
+            <div class="bar sub"><span :style="`width:${curStageProgress.pct}%`"></span></div>
+            <p class="meta" style="margin:2px 0 0"
+               x-text="stageLabel(curStageProgress.stage)+': '+curStageProgress.done+'/'+curStageProgress.total"></p>
+          </div>
+        </template>
+        
+        <p x-show="selJob.status==='failed'" class="sev-crit" x-text="selJob.error"></p>
+        <div class="jobctl" x-show="['queued','running','paused'].includes(selJob.status)">
+          <button x-show="selJob.status==='running'" @click="pauseJob(selJob.id)" x-text="'Pause'"></button>
+          <button x-show="selJob.status==='paused'" @click="resumeJob(selJob.id)" x-text="'Resume'"></button>
+          <button class="ghost" @click="stopJob(selJob.id)" x-text="'Stop'"></button>
+        </div>
+        <template x-if="Object.keys(archChartCounts).length">
+          <div class="distro" style="margin-top:18px">
+            <h3 x-text="'Binaries processed so far, by architecture'"></h3>
+            <div class="dirchart">
+              <div class="archPanel">
+                <svg class="archVis" viewBox="0 0 100 100" aria-hidden="true">
+                  <g transform="rotate(-90 50 50)">
+                    <g x-html="archChartSegmentsSVG()"></g>
+                  </g>
+                </svg>
+                <div class="archPanelLabel" x-text="'Live preview (animates as the scan progresses)'"></div>
+              </div>
+              <div class="archPanel" x-show="archChartUrl">
+                <img class="dirchart-img archVis" :src="archChartUrl" alt="">
+                <div class="archPanelLabel" x-text="'Server-rendered snapshot (CUDA/CPU)'"></div>
+              </div>
+              <div class="dirchart-legend">
+                <template x-for="row in archChartRows" :key="row.arch">
+                  <div class="drow">
+                    <div class="k" style="width:90px" x-text="row.arch"></div>
+                    <div class="t"><span class="bg-info" :style="`width:${row.pct}%`"></span></div>
+                    <div class="v" style="width:auto" x-text="row.n"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+        <h3 style="margin-top:22px" x-text="'Process log'"></h3>
+        <template x-if="!(selJob.log&&selJob.log.length)"><div class="empty" style="margin-top:12px" x-text="'No progress events yet.'"></div></template>
+        <div class="proclog" x-show="selJob.log&&selJob.log.length" x-ref="proclog"
+             x-effect="selJob && selJob.log && selJob.log.length && $nextTick(() => { $refs.proclog.scrollTop = $refs.proclog.scrollHeight })">
+          <template x-for="(e,i) in (selJob.log||[])" :key="i">
+            <div class="logrow">
+              <span class="lt" x-text="logTime(e.time)"></span>
+              <span class="ls" x-text="e.stage"></span>
+              <span class="ld" :title="e.detail" x-text="e.detail"></span>
+              <span class="lp" x-text="e.pct+'%'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="!showVulnDB && !showSensitiveDict && !compareMode && selJob && selJob.kind!=='extract' && selJob.status==='completed' && (!summary || reportLoading)">
+      <div class="loadingBox">
+        <template x-if="!reportLoadError">
+          <div style="width:280px">
+            <div class="bar"><span :style="`width:${reportLoadProgress}%`"></span></div>
+            <div style="text-align:center;margin-top:10px" x-text="'Analysis finished — loading the report (large folders can take a moment)…'+' '+reportLoadProgress+'%'"></div>
+          </div>
+        </template>
+        <template x-if="reportLoadError">
+          <div style="text-align:center">
+            <div class="sev-crit" x-text="'Failed to load the report'+': '+reportLoadError"></div>
+            <button class="ghost sm" style="margin-top:10px" @click="loadReport(selJob.id)" x-text="'Retry'"></button>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!showVulnDB && !showSensitiveDict && !compareMode && selJob && selJob.kind==='extract' && selJob.status==='completed'">
+      <div class="pane extraction-pane">
+        <h2 x-text="'Extracted regions'"></h2>
+        <p class="meta" x-text="'Regions found'+': '+(selJob.regions||[]).length+' — '+'Usable'+': '+(selJob.regions||[]).filter(r=>r.usable).length"></p>
+        <div class="table-wrap">
+          <table class="bins">
+            <thead><tr>
+              <th x-text="'Type'"></th>
+              <th x-text="'Offset'"></th>
+              <th x-text="'Size'"></th>
+              <th x-text="'Status'"></th>
+              <th x-text="'Extracted path'"></th>
+              <th x-text="'Actions'"></th>
+            </tr></thead>
+            <tbody>
+              <template x-for="(r,i) in (selJob.regions||[])" :key="i">
+                <tr>
+                  <td><span class="chip neutral" x-text="r.type"></span>
+                      <span class="chip neutral" x-show="r.category" x-text="r.category"></span></td>
+                  <td class="path" x-text="'0x'+r.offset.toString(16)"></td>
+                  <td>
+                    <div x-text="'In image'+': '+formatSize(r.region_size)"></div>
+                    <div class="meta" x-text="'Extracted'+': '+formatSize(r.bytes)+' · '+r.files+'f/'+r.dirs+'d'"></div>
+                  </td>
+                  <td>
+                    <span class="chip" :class="r.usable ? 'ok' : 'bad'" x-text="r.status"></span>
+                    <div class="meta" style="margin-top:2px" x-show="r.warnings&&r.warnings.length" x-text="(r.warnings||[]).join('; ')"></div>
+                  </td>
+                  <td class="path" :title="r.path" x-text="r.path || '—'"></td>
+                  <td>
+                    <template x-if="r.usable">
+                      <span style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button @click="submitFromRegion(r.path, 'analyze')" x-text="'Start analysis'"></button>
+                        <button class="ghost sm" @click="submitFromRegion(r.path, 'extract')" x-text="'Extract again'"></button>
+                      </span>
+                    </template>
+                    <span x-show="!r.usable" x-text="'—'"></span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <template x-if="!(selJob.regions||[]).length">
+            <div class="empty" x-text="'moria found nothing extractable in this target.'"></div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="!showVulnDB && !showSensitiveDict && !compareMode && selJob && selJob.kind!=='extract' && selJob.status==='completed' && summary && !reportLoading">
+      <div>
+        <!-- Five primary tabs. Everything that used to be a top-level tab is
+             still one click away, under the tab that owns it. -->
+        <nav class="tabs" aria-label="Scan report">
+          <button :class="{active:tab==='dashboard'}" @click="openReportTab('dashboard')" x-text="'Overview'"></button>
+          <button :class="{active:tab==='findings'}" @click="tab='findings'">
+            <span x-text="'Findings'"></span><span class="cnt" x-text="fmtNum(viewSummary.findings)"></span>
+          </button>
+          <button :class="{active:INVENTORY_TABS.includes(tab)}" @click="goInventory()">
+            <span x-text="'Inventory'"></span><span class="cnt" x-text="fmtNum(inventoryTotal())"></span>
+          </button>
+          <button :class="{active:STRING_TABS.includes(tab)}" @click="goStrings()">
+            <span x-text="'Strings'"></span><span class="cnt" x-text="fmtNum(totalStrings)"></span>
+          </button>
+          <button :class="{active:tab==='ai'}" @click="openReportTab('ai')" x-text="'AI Analysis'"></button>
+          <button :class="{active:tab==='reports'}" @click="openReportTab('reports')" x-text="'Reports'"></button>
+        </nav>
+
+        <div class="subnav" x-show="INVENTORY_TABS.includes(tab)">
+          <nav class="segnav">
+            <button :class="{active:tab==='binaries'}" @click="tab='binaries'">
+              <span x-text="'Binaries'"></span><span class="cnt" x-text="fmtNum(binariesPage.total)"></span></button>
+            <button :class="{active:tab==='scripts'}" @click="tab='scripts'">
+              <span x-text="'Scripts'"></span><span class="cnt" x-text="fmtNum(scriptsPage.total)"></span></button>
+            <button :class="{active:tab==='components'}" @click="tab='components'">
+              <span x-text="'Components'"></span><span class="cnt" x-text="fmtNum(componentsPage.total)"></span></button>
+            <button :class="{active:tab==='files'}" @click="tab='files'">
+              <span x-text="'Files'"></span><span class="cnt" x-text="fmtNum(viewSummary.file_count)"></span></button>
+            <button :class="{active:tab==='busybox'}" @click="tab='busybox'">
+              <span x-text="'BusyBox'"></span><span class="cnt" x-text="fmtNum(extraCommands.length)"></span></button>
+            <button :class="{active:tab==='services'}" @click="tab='services'">
+              <span x-text="'Services'"></span><span class="cnt" x-text="fmtNum(services.length)"></span></button>
+          </nav>
+        </div>
+
+        <div class="subnav" x-show="STRING_TABS.includes(tab)">
+          <nav class="segnav">
+            <button :class="{active:tab==='strings'}" @click="tab='strings'; onStringsTab()">
+              <span x-text="'All strings'"></span><span class="cnt" x-text="fmtNum(totalStrings)"></span></button>
+            <button :class="{active:tab==='sensitive'}" @click="tab='sensitive'; computeSensitive()">
+              <span x-text="'Sensitive'"></span><span class="cnt" x-text="fmtNum(sensitiveResults.length)"></span></button>
+          </nav>
+        </div>
+
+        <div class="pane">
+        <p class="context-copy" x-show="viewDescription()" x-text="viewDescription()"></p>
+        <div class="evidence-return" x-show="evidenceReturn && evidenceReturn.scan===selectedId && tab!=='findings'"><button class="ghost sm" @click="returnToFinding()">Back to finding</button><span class="muted">Return to the original finding with its filters and evidence intact.</span></div>
+
+        <section x-show="tab==='reports'" aria-label="Report downloads">
+          <h3>Reports &amp; exports</h3><p class="context-copy">Download this analysis for review, automation or component tracking. Exports include firmware evidence; review the contents before sharing.</p>
+          <div class="report-formats" aria-label="Download full report">
+            <a :href="exportURL('md')"><strong>Download Markdown</strong><span>Readable report with findings, evidence and remediation.</span></a>
+            <a :href="exportURL('json')"><strong>Download JSON</strong><span>Complete structured analysis for tools and detailed review.</span></a>
+            <a :href="exportURL('sbom')"><strong>Download SBOM</strong><span>CycloneDX component inventory and detected CVE references.</span></a>
+          </div>
+          <p class="context-copy">Need only a subset? <button class="ghost sm" @click="openReportTab('findings')">Filter findings</button> and use the CSV or JSON filtered export.</p>
+        </section>
+
+        <!-- DASHBOARD -->
+        <div class="dashboard" x-show="tab==='dashboard'">
+          <div class="workflow-links" aria-label="Continue your investigation"><span class="muted">Next steps</span><button class="ghost sm" @click="goToFindings()">Review findings</button><button class="ghost sm" @click="openReportTab('binaries')">Inspect binaries</button><button class="ghost sm" @click="openReportTab('reports')">Download report</button></div>
+          <!-- The severity split is what the analyst reads first, so it gets a
+               card of its own with a proportional bar. The rest of the counts
+               drop to a tile row at three-quarter weight. -->
+          <div class="riskcard">
+            <div class="top">
+              <span class="total" x-text="fmtNum(viewSummary.findings)"></span>
+              <span class="sub" x-text="viewSummary.binaries===1 ? 'findings across 1 binary' : 'findings across {n} binaries'.replace('{n}', fmtNum(viewSummary.binaries))"></span>
+              <span class="spacer"></span>
+              <a href="#" @click.prevent="goToFindings()" x-show="viewSummary.findings>0"
+                 style="font-size:13px;font-weight:500" x-text="'Open findings →'"></a>
+            </div>
+            <div class="sevbar" x-show="viewSummary.findings>0">
+              <template x-for="s in SEVS" :key="'bar-'+s">
+                <span x-show="sevCount(s)>0" :class="'bg-'+SHORT[s]"
+                      :style="`width:${(sevCount(s)/Math.max(1,viewSummary.findings))*100}%`"
+                      :title="severityLabel(s)+': '+sevCount(s)"></span>
+              </template>
+            </div>
+            <div class="sevkeys">
+              <template x-for="s in SEVS" :key="'key-'+s">
+                <button class="sevkey" x-show="sevCount(s)>0" @click="goToFindings({sevOnly:s})">
+                  <span class="sw" :class="'bg-'+SHORT[s]"></span>
+                  <span class="lb" x-text="severityLabel(s)"></span>
+                  <span class="vl" :class="'sev-'+SHORT[s]" x-text="fmtNum(sevCount(s))"></span>
+                </button>
+              </template>
+              <span class="spacer" style="flex:1"></span>
+              <span class="tag" x-show="cveCount>0" style="cursor:pointer" @click="goToCves()"
+                    x-text="'{c} CVEs matched against {k} components'.replace('{c}', fmtNum(cveCount)).replace('{k}', fmtNum(componentsPage.total))"></span>
+            </div>
+          </div>
+
+          <div class="cards">
+            <div class="card" :class="{clickable: viewSummary.binaries>0}" @click="viewSummary.binaries>0 && (tab='binaries')">
+              <div class="n" x-text="fmtNum(viewSummary.binaries)"></div><div class="l" x-text="'Binaries'"></div>
+            </div>
+            <div class="card" :class="{clickable: scriptsPage.total>0}" @click="scriptsPage.total>0 && (tab='scripts')">
+              <div class="n" x-text="fmtNum(scriptsPage.total)"></div><div class="l" x-text="'Scripts'"></div>
+            </div>
+            <div class="card" :class="{clickable: componentsPage.total>0}" @click="componentsPage.total>0 && (tab='components')">
+              <div class="n" x-text="fmtNum(componentsPage.total)"></div><div class="l" x-text="'Components'"></div>
+            </div>
+            <div class="card" :class="{clickable: viewSummary.file_count>0}" @click="viewSummary.file_count>0 && (tab='files')">
+              <div class="n" x-text="fmtNum(viewSummary.file_count)"></div><div class="l" x-text="'Files scanned'"></div>
+            </div>
+            <div class="card" :class="{clickable: cveCount>0}" @click="cveCount>0 && goToCves()">
+              <div class="n" x-text="fmtNum(cveCount)"></div><div class="l" x-text="'CVEs'"></div>
+            </div>
+          </div>
+          <div class="fwmeta" x-show="viewSummary.kernel_version || viewSummary.arch_summary || viewSummary.file_count || componentsPage.total || configFileCount || viewSummary.cert_count">
+            <span class="chip neutral" x-show="viewSummary.kernel_version" x-text="'Kernel'+': '+viewSummary.kernel_version"></span>
+            <span class="chip neutral" x-show="viewSummary.arch_summary" x-text="'Architecture'+': '+viewSummary.arch_summary+(viewSummary.endian_summary?' ('+viewSummary.endian_summary+')':'')"></span>
+            <span class="chip neutral" x-show="viewSummary.firmware_size" x-text="'Firmware size'+': '+formatSize(viewSummary.firmware_size)"></span>
+
+            <span class="chip neutral clickable" x-show="componentsPage.total" @click="tab='components'"
+                  x-text="'Components'+': '+componentsPage.total"></span>
+            <span class="chip neutral clickable" x-show="configFileCount" @click="tab='files'; filesKindFilter='config'; loadFiles()"
+                  x-text="'Config files'+': '+configFileCount"></span>
+            <span class="chip neutral" x-show="viewSummary.cert_count"
+                  x-text="'Certificates'+': '+viewSummary.cert_count+(viewSummary.rsa_cert_count?' ('+viewSummary.rsa_cert_count+' RSA)':'')"></span>
+          </div>
+          <template x-if="componentsPage.total">
+            <details style="margin:0 0 14px">
+              <summary style="cursor:pointer;color:var(--muted);font-size:13px" x-text="'Show component names'"></summary>
+              <div class="kwrow" style="margin-top:8px">
+                <template x-for="c in componentsPage.items" :key="c.name+'@'+c.version">
+                  <span class="chip neutral" x-text="c.name+' '+c.version"></span>
+                </template>
+              </div>
+            </details>
+          </template>
+
+          <section class="integration-panel" aria-label="Analysis integrations">
+            <h3>Integrations</h3>
+            <div class="integration-row" data-integration-preview="ghidra"><div><strong>Ghidra decompilation</strong><p x-text="isDemo ? 'Illustrative pseudocode attached to a sample finding.' : (ghidraAvailable ? 'Available for new scans when enabled in analysis options.' : 'Requires Ghidra and a compatible Java runtime on this server.')"></p></div><button class="ghost sm" @click="openGhidraPreview()" x-text="isDemo ? 'Preview pseudocode' : 'Analysis options'"></button></div>
+            <div class="integration-row" data-integration-preview="cve"><div><strong>CVE intelligence</strong><p x-text="isDemo ? 'Curated public records and a recorded checker catalogue.' : 'Inspect curated references and this server’s configured matching coverage.'"></p></div><button class="ghost sm" @click="toggleVulnDB()">Explore CVE library</button></div>
+            <div class="integration-row" data-integration-preview="ai"><div><strong>AI investigation</strong><p x-text="isDemo ? 'Read an illustrative response authored from sample evidence.' : 'Optional evidence review using your configured provider.'"></p></div><button class="ghost sm" @click="openReportTab('ai')" x-text="isDemo ? 'Read investigation' : 'Open AI analysis'"></button></div>
+          </section>
+
+          <div class="distro" x-show="busyboxAudit.has_busybox">
+            <h3 x-text="'BusyBox overview'"></h3>
+            <div class="cards">
+              <div class="card clickable" @click="tab='busybox'">
+                <div class="n sev-low" x-text="busyboxAudit.compiled_in.length"></div><div class="l" x-text="'Applets compiled in'"></div>
+              </div>
+              <div class="card clickable" @click="tab='busybox'">
+                <div class="n sev-crit" x-text="busyboxAudit.missing.length"></div><div class="l" x-text="'Missing reference applets'"></div>
+              </div>
+              <div class="card clickable" @click="tab='busybox'">
+                <div class="n" x-text="extraCommands.length"></div><div class="l" x-text="'Extra commands'"></div>
+              </div>
+              <div class="card clickable" @click="tab='busybox'">
+                <div class="n" x-text="initScripts.length"></div><div class="l" x-text="'init.d scripts'"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="distro" x-show="services.length">
+            <h3 x-text="'Network services'"></h3>
+            <div class="cards">
+              <div class="card clickable" @click="tab='services'">
+                <div class="n" x-text="viewSummary.service_count||services.length"></div><div class="l" x-text="'Services identified'"></div>
+              </div>
+              <div class="card clickable" @click="tab='services'">
+              <div class="n" x-text="viewSummary.open_port_count||servicePorts.length"></div><div class="l" x-text="'Inferred ports'"></div>
+              </div>
+            </div>
+            <div class="kwrow" style="margin-top:8px">
+              <template x-for="p in servicePorts" :key="p">
+                <span class="chip neutral" x-text="p"></span>
+              </template>
+            </div>
+          </div>
+
+          <div class="dashboard-breakdown"><div class="distro rootfs-composition" x-show="dirBreakdown.length">
+            <h3 x-text="'Filesystem composition'"></h3>
+            <div class="dirchart">
+              <img class="dirchart-img dirchart-img-lg" :src="dirChartURL()" alt="" loading="lazy">
+              <div class="dirchart-legend">
+                <template x-for="d in dirBreakdown" :key="d.name">
+                  <div class="drow">
+                    <div class="k" style="width:90px" x-text="d.name"></div>
+                    <div class="t"><span class="bg-info" :style="`width:${d.pct}%`"></span></div>
+                    <div class="v" style="width:auto;white-space:nowrap" x-text="d.pct.toFixed(1)+'% · '+formatSize(d.bytes)"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="l" style="color:var(--muted);font-size:13px;margin-top:6px"
+                 x-show="viewSummary.dir_chart_renderer"
+                 x-text="'Chart rendered via'+': '+(viewSummary.dir_chart_renderer==='cuda'?'GPU (CUDA)':'CPU')"></div>
+          </div>
+
+          <div class="distro">
+            <h3 x-text="'By severity'"></h3>
+            <template x-for="s in SEVS" :key="s">
+              <div class="drow clickable" x-show="sevCount(s)>0" @click="goToFindings({sevOnly:s})">
+                <div class="k" :class="'sev-'+SHORT[s]" x-text="severityLabel(s)"></div>
+                <div class="t"><span :class="'bg-'+SHORT[s]" :style="`width:${pct(sevCount(s))}%`"></span></div>
+                <div class="v" x-text="sevCount(s)"></div>
+              </div>
+            </template>
+          </div>
+          <div class="distro">
+            <h3 x-text="'By vulnerability class'"></h3>
+            <template x-for="vc in classCounts" :key="vc.k">
+              <div class="drow clickable" @click="goToFindings({vclass:vc.k})">
+                <div class="k" style="width:160px" x-text="humanClass(vc.k)"></div>
+                <div class="t"><span class="bg-info" :style="`width:${pct(vc.n)}%`"></span></div>
+                <div class="v" x-text="vc.n"></div>
+              </div>
+            </template>
+          </div>
+        </div></div>
+
+        <!-- FINDINGS -->
+        <div x-show="tab==='findings'">
+          <div class="view-description"><p>Expand a finding to inspect its evidence, open the supporting binary or file, and record your triage decision.</p><button class="help-button" aria-label="About findings and confidence" data-help="Static detections are candidates for analyst review. Confidence measures the strength of the detection evidence, not the probability of exploitation. Taint paths are heuristic source-to-sink hypotheses; validate reachability before confirming."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6v.5"/></svg></button></div>
+          <div class="filters">
+            <div class="sevtog">
+              <template x-for="s in SEVS" :key="s">
+                <button :class="[SHORT[s], f.sev[s] ? 'on' : '']" :title="severityLabel(s)"
+                        @click="f.sev[s]=!f.sev[s]; loadFindings()">
+                  <span class="sw"></span>
+                  <span x-text="severityLabel(s)"></span>
+                  <span class="cnt" x-show="sevCount(s)>0" x-text="fmtNum(sevCount(s))"></span>
+                </button>
+              </template>
+            </div>
+            <select x-model="f.vclass" @change="loadFindings()">
+              <option value="" x-text="'All classes'"></option>
+              <template x-for="c in vclasses" :key="c"><option :value="c" x-text="humanClass(c)"></option></template>
+            </select>
+            <select x-model="f.triage" @change="loadFindings()">
+              <option value="" x-text="'Any triage'"></option>
+              <option value="new" x-text="triageLabel('new')"></option>
+              <option value="confirmed" x-text="triageLabel('confirmed')"></option>
+              <option value="false_positive" x-text="triageLabel('false_positive')"></option>
+              <option value="accepted_risk" x-text="triageLabel('accepted_risk')"></option>
+            </select>
+            <input type="text" x-model="f.q" @input.debounce.250ms="loadFindings()" :placeholder="'search title/snippet/function…'">
+            <label class="rng"><span x-text="'Confidence ≥'"></span>
+              <input type="range" min="0" max="1" step="0.05" x-model.number="f.minConf" @change="loadFindings()" style="width:90px">
+              <span class="num" style="width:34px;text-align:right" x-text="Math.round(f.minConf*100)+'%'"></span>
+            </label>
+            <select x-model="sort" @change="loadFindings()">
+              <option value="severity" x-text="'sort: severity'"></option>
+              <option value="confidence" x-text="'sort: confidence'"></option>
+            </select>
+            <select x-model="groupBy" @change="savePreference('defile-fgroup', groupBy); seedCollapsedGroups()" :title="'Group findings by'">
+              <option value="component" x-text="'Group: component'"></option>
+              <option value="" x-text="'Group: none'"></option>
+            </select>
+            <span class="count" x-text="findingsPage.total+' '+'findings'"></span>
+            <button class="ghost sm" @click="exportFilteredCSV()" x-text="'Export filtered (CSV)'"></button>
+            <button class="ghost sm" @click="exportFilteredJSON()" x-text="'Export filtered (JSON)'"></button>
+          </div>
+
+          <template x-if="!findings.length"><div class="empty">No findings match the filters. <button class="ghost sm" @click="resetFilters(); loadFindings()">Clear filters</button></div></template>
+          <!-- One row list for both modes: findingRows() emits group bands and
+               finding rows in order, so the finding markup exists once and a
+               collapsed group simply stops emitting its rows. -->
+          <div :class="groupBy ? 'flist' : ''" x-show="findings.length">
+          <template x-for="row in findingRows()" :key="row.key">
+            <div>
+            <template x-if="row.type==='group'">
+              <button class="fgrouphd" @click="toggleGroup(row.key)">
+                <span class="car" x-text="row.open?'▾':'▸'"></span>
+                <span class="nm" :title="row.name" x-text="shortPath(row.name)"></span>
+                <span class="ver" x-show="row.version" x-text="row.version"></span>
+                <span class="tag" x-show="row.collapsedNote" x-text="row.collapsedNote"></span>
+                <span class="chip neutral" x-text="row.count+' '+'findings'"></span>
+                <span class="spacer"></span>
+                <template x-for="s in SEVS" :key="row.key+'-'+s">
+                  <span class="sevpip" :class="SHORT[s]" x-show="row.sev[s]>0" :title="severityLabel(s)" x-text="row.sev[s]"></span>
+                </template>
+                <span class="pth" x-show="row.path" :title="row.path" x-text="row.path"></span>
+              </button>
+            </template>
+            <template x-if="row.type==='finding'">
+            <div class="finding" :data-finding-id="row.f.id" :class="[SHORT[row.f.severity], groupBy ? '' : 'flat']" x-data="{open:false, f:row.f}">
+              <div class="hd" role="button" tabindex="0" :aria-expanded="open" @keydown.enter.self.prevent="open=!open; if(open) triageHistoryFor(f.id)" @keydown.space.self.prevent="open=!open; if(open) triageHistoryFor(f.id)" @click="open=!open; if(open) triageHistoryFor(f.id)">
+                <span class="sevtag" :class="'bg-'+SHORT[f.severity]" x-text="severityLabel(f.severity)"></span>
+                <span class="t" :title="f.title" x-text="row.label"></span>
+                <span class="sub" style="margin:0;flex:none;white-space:nowrap" x-text="humanClass(f.vuln_class)+' · '+Math.round(f.confidence*100)+'%'"></span>
+                <span x-show="(f.triage&&f.triage!=='new')" class="cur" :class="f.triage" x-text="triageLabel(f.triage)"></span>
+                <span x-show="f.cve_ids&&f.cve_ids.length" class="sub cvelist" style="margin:0">
+                  <template x-for="(cve, ci) in f.cve_ids" :key="cve">
+                    <span><a :href="cveUrl(cve)" target="_blank" rel="noopener" @click.stop x-text="cve"></a><span x-show="ci < f.cve_ids.length-1">, </span></span>
+                  </template>
+                </span>
+                <span style="flex:none;color:var(--muted)" x-text="open?'▾':'▸'"></span>
+              </div>
+              <div class="body" x-show="open">
+                <div class="sub" x-text="'component'+': '+f.component+'  ·  '+'rule'+': '+f.rule+'  ·  '+'id'+': '+f.id"></div>
+                <div class="desc" x-text="f.description"></div>
+                <template x-for="(e,i) in (f.evidence||[])" :key="i">
+                  <div class="ev"><span class="loc" x-text="[e.binary,e.function,e.address].filter(Boolean).join(' : ')"></span><br>
+                    <span x-text="e.snippet"></span>
+                    <div class="evidence-actions" x-show="supportsEvidence(e)"><button class="ghost sm" @click="inspectEvidence(e,f.id)">Inspect supporting evidence</button></div>
+                    <template x-if="e.taint_path && e.taint_path.length">
+                      <div class="taint" x-text="'↳ '+(e.taint_path||[]).join(' → ')"></div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="f.pseudocode">
+                  <details>
+                    <summary style="cursor:pointer;color:var(--muted);font-size:13px;margin-top:8px" x-text="'Decompiled pseudocode (Ghidra)'"></summary>
+                    <pre class="code" x-text="f.pseudocode"></pre>
+                  </details>
+                </template>
+                <div class="sub" x-show="f.remediation" x-text="'▸ '+f.remediation"></div>
+                <div class="tristrip">
+                  <span class="lab" x-text="'Triage:'"></span>
+                  <button class="ghost sm" @click="setTriage(f,'confirmed')" x-text="'Confirm'"></button>
+                  <button class="ghost sm" @click="setTriage(f,'false_positive')" x-text="'False positive'"></button>
+                  <button class="ghost sm" @click="setTriage(f,'accepted_risk')" x-text="'Accept risk'"></button>
+                  <button class="ghost sm" @click="setTriage(f,'new')" x-text="'Reset'"></button>
+                </div>
+                <div class="sub" style="margin-top:8px">
+                  <span x-text="'Triage history'+':'"></span>
+                  <template x-if="!(triageHistoryCache[f.id]&&triageHistoryCache[f.id].length)">
+                    <span x-text="'No triage changes yet.'"></span>
+                  </template>
+                  <template x-for="(e,i) in (triageHistoryCache[f.id]||[])" :key="i">
+                    <div class="ev" style="padding:4px 8px">
+                      <span x-text="logTime(e.time)"></span> — <span x-text="triageLabel(e.state)"></span>
+                      <span x-show="e.actor" x-text="' ('+e.actor+')'"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+            </template>
+            </div>
+          </template>
+          </div>
+          <div class="pager" x-show="findingsPage.total > findingsPage.limit">
+            <button class="ghost sm" :disabled="findingsPage.offset<=0" @click="findingsPrevPage()" x-text="'← Prev'"></button>
+            <span class="sub" x-text="(findingsPage.offset+1)+'–'+Math.min(findingsPage.offset+findingsPage.limit, findingsPage.total)+' / '+findingsPage.total"></span>
+            <button class="ghost sm" :disabled="findingsPage.offset+findingsPage.limit>=findingsPage.total" @click="findingsNextPage()" x-text="'Next →'"></button>
+            <span class="pager-jump">
+              <input type="number" min="1" :max="Math.max(1,Math.ceil(findingsPage.total/findingsPage.limit))"
+                     x-model="findingsJumpTo" @keydown.enter="findingsGoToPage()"
+                     :placeholder="String(Math.floor(findingsPage.offset/findingsPage.limit)+1)">
+              <button class="ghost sm" @click="findingsGoToPage()" x-text="'Go'"></button>
+            </span>
+          </div>
+        </div>
+
+        <!-- BINARIES -->
+        <div x-show="tab==='binaries'">
+          <div class="view-description"><p>Select a binary to inspect its recorded functions and imported calls. Security protections are observations; an absent protection alone does not establish a vulnerability.</p><button class="help-button" aria-label="About binary hardening and recovered functions" data-help="NX restricts executable memory; canaries detect some stack corruption; RELRO protects relocation data; PIE supports address randomization; FORTIFY adds checked library calls. Function recovery uses symbols and heuristic boundaries, so stripped code can be incomplete."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6v.5"/></svg></button></div>
+          <template x-if="focusedBinary">
+            <section class="binary-inspection" id="binary-inspection" tabindex="-1" aria-label="Selected binary evidence">
+              <div class="inspection-heading"><h3 x-text="baseOf(viewBinary.path)"></h3><button class="ghost sm" @click="focusedBinaryPath=''; binaryFunctionQuery=''; focusWorkspace()">Close inspection</button></div>
+              <code class="full-path" x-text="viewBinary.path"></code>
+              <p class="context-copy" x-text="archLabel(viewBinary)+' · '+viewBinary.functions.length+' recorded functions · '+viewBinary.imports.length+' imports'"></p>
+              <input type="search" x-model="binaryFunctionQuery" aria-label="Search recorded functions" placeholder="Find a function, address or imported call…">
+              <div class="table-wrap"><table class="bins"><thead><tr><th>Function</th><th>Address</th><th>Bytes</th><th>Imported calls</th></tr></thead><tbody><template x-for="(fn,i) in focusedFunctions.slice(0,100)" :key="fn.address+'-'+i"><tr><td x-text="fn.name"></td><td class="mono" x-text="'0x'+Number(fn.address).toString(16)"></td><td x-text="fn.size"></td><td x-text="(fn.callees_imported||[]).join(', ') || 'None recorded'"></td></tr></template></tbody></table></div>
+              <p class="context-copy" x-show="!focusedFunctions.length">No recorded functions match. Clear or refine the function search.</p><p class="field-hint" x-show="focusedFunctions.length>100">Showing the first 100 matches. Refine the search or download JSON for the complete function records.</p>
+              <div class="inspection-actions"><button class="ghost sm" @click="tab='strings'; stringsBinary=viewBinary.path">Inspect strings</button><button class="ghost sm" @click="goToFindings({q:baseOf(viewBinary.path)})">Related findings</button></div>
+            </section>
+          </template>
+          <!-- The six hardening slots are only readable as a strip once they
+               are named, and the strip is the whole point of the column. -->
+          <div class="hardlegend">
+            <span style="font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)"
+                  x-text="'Hardening slots'"></span>
+            <span><span class="k">NX</span> no-execute</span>
+            <span><span class="k">CN</span> <span x-text="'stack canary'"></span></span>
+            <span><span class="k">RL</span> RELRO</span>
+            <span><span class="k">PI</span> PIE</span>
+            <span><span class="k">FT</span> FORTIFY</span>
+            <span><span class="k">SY</span> <span x-text="'symbols kept'"></span></span>
+            <span style="flex:1"></span>
+            <span><span class="sw" style="background:var(--ok)"></span><span x-text="'on'"></span></span>
+            <span><span class="sw" style="background:var(--warn)"></span><span x-text="'partial'"></span></span>
+            <span><span class="sw" style="background:var(--bad)"></span><span x-text="'off'"></span></span>
+          </div>
+          <div class="table-wrap">
+            <table class="bins binary-table">
+              <colgroup>
+                <col style="width:auto"><col style="width:110px"><col style="width:80px">
+                <col style="width:222px"><col style="width:110px"><col style="width:86px">
+                <col style="width:88px"><col style="width:268px">
+              </colgroup>
+              <thead><tr>
+                <th x-text="'Binary'"></th><th x-text="'Architecture'"></th><th title="Detected C library" x-text="'libc'"></th>
+                <th x-text="'Mitigations'"></th>
+                <th x-text="'CVEs'"></th>
+                <th style="text-align:right" x-text="'Strings'"></th>
+                <th style="text-align:right" x-text="'Functions'"></th>
+                <th x-text="'MD5'"></th>
+              </tr></thead>
+              <tbody>
+                <template x-for="b in binaries" :key="b.path">
+                  <tr>
+                    <td class="dirpath" :title="b.path">
+                      <span class="pwrap">
+                        <button class="binary-link" @click="inspectBinary(b.path)" :aria-label="'Inspect '+b.path"><span class="dir" x-text="dirOf(b.path)"></span><span class="base" x-text="baseOf(b.path)"></span></button>
+                        <span x-show="b.warnings&&b.warnings.length" class="chip warn" style="margin-left:6px;flex:none"
+                              :title="(b.warnings||[]).join('\n')" x-text="'⚠ '+((b.warnings&&b.warnings.length)||0)"></span>
+                      </span>
+                    </td>
+                    <td class="cell1 mono" style="font-size:13px"
+                        x-text="archLabel(b)"></td>
+                    <td class="cell1 mono" style="font-size:13px" x-text="b.libc||'—'"></td>
+                    <td><div class="hard" x-html="hardStrip(b.mitigations)"></div></td>
+                    <td>
+                      <template x-if="cvesFor(b.path).length">
+                        <button class="chip bad clickable" style="cursor:pointer;border:0"
+                                :title="cvesFor(b.path).join(', ')"
+                                @click="goToFindings({q: baseOf(b.path)})"
+                                x-text="cvesFor(b.path).length+' '+'CVEs'"></button>
+                      </template>
+                      <span x-show="!cvesFor(b.path).length" style="color:var(--dim)">—</span>
+                    </td>
+                    <td class="num"><a href="#" @click.prevent="tab='strings'; stringsBinary=b.path"
+                           x-text="fmtNum((b.strings&&b.strings.length)||0)"></a></td>
+                    <td class="num"><button class="text-action" @click="inspectBinary(b.path)" :aria-label="'Inspect functions in '+baseOf(b.path)" x-text="fmtNum((b.functions&&b.functions.length)||0)"></button></td>
+                    <td class="md5" :title="b.md5||''" x-text="b.md5||'—'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager" x-show="binariesPage.total > binariesPage.limit">
+            <button class="ghost sm" :disabled="binariesPage.offset<=0" @click="binariesPrevPage()" x-text="'← Prev'"></button>
+            <span class="sub" x-text="(binariesPage.offset+1)+'–'+Math.min(binariesPage.offset+binariesPage.limit, binariesPage.total)+' / '+binariesPage.total"></span>
+            <button class="ghost sm" :disabled="binariesPage.offset+binariesPage.limit>=binariesPage.total" @click="binariesNextPage()" x-text="'Next →'"></button>
+            <span class="pager-jump">
+              <input type="number" min="1" :max="Math.max(1,Math.ceil(binariesPage.total/binariesPage.limit))"
+                     x-model="binariesJumpTo" @keydown.enter="binariesGoToPage()"
+                     :placeholder="String(Math.floor(binariesPage.offset/binariesPage.limit)+1)">
+              <button class="ghost sm" @click="binariesGoToPage()" x-text="'Go'"></button>
+            </span>
+          </div>
+        </div>
+
+        <!-- SCRIPTS -->
+        <div x-show="tab==='scripts'">
+          <template x-if="!scripts.length"><div class="empty" x-text="'No shell/PHP/Python/Lua scripts found in this target.'"></div></template>
+          <div class="table-wrap" x-show="scripts.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Script'"></th><th x-text="'Kind'"></th><th x-text="'Findings'"></th>
+                <th x-text="'MD5'"></th>
+              </tr></thead>
+              <tbody>
+                <template x-for="s in scripts" :key="s.path">
+                  <tr>
+                    <td class="path" :title="s.path" x-text="shortPath(s.path)"></td>
+                    <td x-text="s.kind"></td>
+                    <td>
+                      <a href="#" x-show="s.findings" @click.prevent="goToFindings({q:s.path})" x-text="s.findings"></a>
+                      <span x-show="!s.findings">0</span>
+                    </td>
+                    <td class="path" :title="s.md5||''" x-text="s.md5||'—'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager" x-show="scriptsPage.total > scriptsPage.limit">
+            <button class="ghost sm" :disabled="scriptsPage.offset<=0" @click="scriptsPrevPage()" x-text="'← Prev'"></button>
+            <span class="sub" x-text="(scriptsPage.offset+1)+'–'+Math.min(scriptsPage.offset+scriptsPage.limit, scriptsPage.total)+' / '+scriptsPage.total"></span>
+            <button class="ghost sm" :disabled="scriptsPage.offset+scriptsPage.limit>=scriptsPage.total" @click="scriptsNextPage()" x-text="'Next →'"></button>
+            <span class="pager-jump">
+              <input type="number" min="1" :max="Math.max(1,Math.ceil(scriptsPage.total/scriptsPage.limit))"
+                     x-model="scriptsJumpTo" @keydown.enter="scriptsGoToPage()"
+                     :placeholder="String(Math.floor(scriptsPage.offset/scriptsPage.limit)+1)">
+              <button class="ghost sm" @click="scriptsGoToPage()" x-text="'Go'"></button>
+            </span>
+          </div>
+        </div>
+
+        <!-- COMPONENTS -->
+        <div x-show="tab==='components'">
+          <template x-if="!components.length"><div class="empty" x-text="'No known software components detected (the offline DB only recognizes a handful of banner strings — busybox/openssl/dropbear/uclibc/lighttpd).'"></div></template>
+          <div class="table-wrap" x-show="components.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Component'"></th><th x-text="'Version'"></th>
+                <th x-text="'Binaries'"></th><th x-text="'CVEs'"></th>
+              </tr></thead>
+              <tbody>
+                <template x-for="c in components" :key="c.name+'@'+c.version">
+                  <tr>
+                    <td x-text="c.name"></td>
+                    <td x-text="c.version"></td>
+                    <td :title="(c.binaries||[]).join('\n')" x-text="(c.binaries&&c.binaries.length)||0"></td>
+                    <td>
+                      <template x-for="(cve, ci) in (c.cve_ids||[])" :key="cve">
+                        <span><a :href="cveUrl(cve)" target="_blank" rel="noopener" x-text="cve"></a><span x-show="ci < c.cve_ids.length-1">, </span></span>
+                      </template>
+                      <span x-show="!(c.cve_ids&&c.cve_ids.length)">—</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- FILES -->
+        <div x-show="tab==='files'">
+          <p class="meta" x-text="'Every file under the scanned target, not just ELF binaries and recognized scripts — this is the full listing. Click a config file or script\u0027s path to preview its content.'"></p>
+          <div class="filters">
+            <select x-model="filesKindFilter" @change="loadFiles()">
+              <option value="" x-text="'All kinds'"></option>
+              <option value="binary" x-text="fileKindLabel('binary')"></option>
+              <option value="script" x-text="fileKindLabel('script')"></option>
+              <option value="config" x-text="fileKindLabel('config')"></option>
+              <option value="symlink" x-text="fileKindLabel('symlink')"></option>
+              <option value="other" x-text="fileKindLabel('other')"></option>
+            </select>
+            <span class="count" x-text="filesPage.total"></span>
+          </div>
+          <template x-if="!files.length"><div class="empty" x-text="'No files found in this target.'"></div></template>
+          <div class="table-wrap" x-show="files.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Path'"></th><th x-text="'Kind'"></th>
+                <th x-text="'Size'"></th><th x-text="'MD5'"></th>
+              </tr></thead>
+              <template x-for="f in files" :key="f.path">
+                <tbody>
+                  <tr>
+                    <td class="path" :title="f.path"><button class="path-action" :title="f.path" :disabled="!previewableKind(f.kind)" @click="openFilePreview(f)" x-text="(previewableKind(f.kind) ? (filePreviewPath===f.path ? '▾ ' : '▸ ') : '')+shortPath(f.path)"></button></td>
+                    <td><span class="chip" :class="fileKindChipClass(f.kind)" x-text="fileKindLabel(f.kind)"></span></td>
+                    <td x-text="formatSize(f.size)"></td>
+                    <td class="path" :title="f.md5||''" x-text="f.md5||'—'"></td>
+                  </tr>
+                  <!-- Preview renders directly under the clicked row (not at
+                       the bottom of the whole list/page) so opening it never
+                       means scrolling away from what you just clicked. -->
+                  <tr x-show="filePreviewPath === f.path" :data-preview-path="f.path" tabindex="-1">
+                    <td colspan="4" class="preview-cell">
+                      <div class="filters" style="margin-bottom:8px">
+                        <span class="path" style="flex:1" x-text="f.path"></span>
+                        <button class="ghost sm" @click="filePreviewPath=''" x-text="'Close'"></button>
+                      </div>
+                      <template x-if="filePreviewLoading"><div class="empty" x-text="'Loading…'"></div></template>
+                      <template x-if="!filePreviewLoading && filePreviewEntry && filePreviewEntry.error">
+                        <div class="empty" x-text="'Could not load preview'+': '+filePreviewEntry.error"></div>
+                      </template>
+                      <template x-if="!filePreviewLoading && filePreviewEntry && !filePreviewEntry.error">
+                        <div>
+                          <pre class="code" style="max-height:50vh" x-html="highlightedPreview"></pre>
+                          <p class="meta" x-show="filePreviewEntry?.truncated" x-text="'(content truncated — file is larger than the preview limit)'"></p>
+                        </div>
+                      </template>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+            </table>
+          </div>
+          <div class="pager" x-show="filesPage.total > filesPage.limit">
+            <button class="ghost sm" :disabled="filesPage.offset<=0" @click="filesPrevPage()" x-text="'← Prev'"></button>
+            <span class="sub" x-text="(filesPage.offset+1)+'–'+Math.min(filesPage.offset+filesPage.limit, filesPage.total)+' / '+filesPage.total"></span>
+            <button class="ghost sm" :disabled="filesPage.offset+filesPage.limit>=filesPage.total" @click="filesNextPage()" x-text="'Next →'"></button>
+            <span class="pager-jump">
+              <input type="number" min="1" :max="Math.max(1,Math.ceil(filesPage.total/filesPage.limit))"
+                     x-model="filesJumpTo" @keydown.enter="filesGoToPage()"
+                     :placeholder="String(Math.floor(filesPage.offset/filesPage.limit)+1)">
+              <button class="ghost sm" @click="filesGoToPage()" x-text="'Go'"></button>
+            </span>
+          </div>
+        </div>
+
+        <!-- STRINGS -->
+        <div x-show="tab==='strings'">
+          <div class="filters">
+            <select x-model="stringsBinary">
+              <template x-for="b in stringsSources" :key="b.path">
+                <option :value="b.path" x-text="shortPath(b.path)+' ('+((b.strings&&b.strings.length)||0)+')'"></option>
+              </template>
+            </select>
+            <input type="text" x-model="stringsQuery" :placeholder="'search extracted strings…'">
+            <span class="count" x-text="filteredStrings.length+' / '+currentBinaryStrings.length"></span>
+          </div>
+          <template x-if="!stringsSources.length"><div class="empty" x-text="'No binaries, scripts, or config files with extracted strings in this report.'"></div></template>
+          <template x-if="stringsSources.length && !filteredStrings.length"><div class="empty" x-text="'No strings match the filter.'"></div></template>
+          <pre class="code" style="max-height:70vh" x-show="filteredStrings.length" x-text="stringsText"></pre>
+          <p class="meta" x-show="stringsTruncated" x-text="'Showing the first 2000 matches — narrow your search to see more precisely.'"></p>
+        </div>
+
+        <!-- SENSITIVE STRINGS -->
+        <div x-show="tab==='sensitive'">
+          <p class="meta" style="margin-top:0">
+            <span x-text="'{n} keywords in the current dictionary.'.replace('{n}', sensitiveKeywords.length)"></span>
+            <button class="ghost sm" @click="toggleSensitiveDict()" x-text="'Manage dictionary'"></button>
+          </p>
+          <div class="filters">
+            <select x-model="sensitiveBinary" @change="computeSensitive()">
+              <option value="" x-text="'All (binaries, scripts, configs)'"></option>
+              <template x-for="b in stringsSources" :key="b.path">
+                <option :value="b.path" x-text="shortPath(b.path)"></option>
+              </template>
+            </select>
+            <input type="text" x-model="sensitiveQuery" @input="filterSensitive()" :placeholder="'filter matches (text/keyword/source)…'">
+            <span class="count" x-text="filteredSensitiveResults.length"></span>
+          </div>
+          <template x-if="!stringsSources.length"><div class="empty" x-text="'No binaries, scripts, or config files with extracted strings in this report.'"></div></template>
+          <template x-if="stringsSources.length && !filteredSensitiveResults.length"><div class="empty" x-text="'No strings match the keyword dictionary.'"></div></template>
+          <div class="table-wrap" x-show="filteredSensitiveResults.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Source'"></th>
+                <th x-text="'Keyword'"></th>
+                <th x-text="'String'"></th>
+              </tr></thead>
+              <tbody>
+                <template x-for="(r,idx) in sensitivePageItems" :key="sensitivePage.offset+'-'+idx">
+                  <tr>
+                    <td class="path" :title="r.binary" x-text="shortPath(r.binary)"></td>
+                    <td><span class="chip warn" x-text="r.keyword"></span></td>
+                    <td class="path" x-text="r.text"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager" x-show="filteredSensitiveResults.length > sensitivePage.limit">
+            <button class="ghost sm" :disabled="sensitivePage.offset<=0" @click="sensitivePrevPage()" x-text="'← Prev'"></button>
+            <span class="sub" x-text="(sensitivePage.offset+1)+'–'+Math.min(sensitivePage.offset+sensitivePage.limit, filteredSensitiveResults.length)+' / '+filteredSensitiveResults.length"></span>
+            <button class="ghost sm" :disabled="sensitivePage.offset+sensitivePage.limit>=filteredSensitiveResults.length" @click="sensitiveNextPage()" x-text="'Next →'"></button>
+            <span class="pager-jump">
+              <input type="number" min="1" :max="Math.max(1,Math.ceil(filteredSensitiveResults.length/sensitivePage.limit))"
+                     x-model="sensitiveJumpTo" @keydown.enter="sensitiveGoToPage()"
+                     :placeholder="String(Math.floor(sensitivePage.offset/sensitivePage.limit)+1)">
+              <button class="ghost sm" @click="sensitiveGoToPage()" x-text="'Go'"></button>
+            </span>
+          </div>
+          <p class="meta" x-show="sensitiveTruncated" x-text="'Showing the first 3000 matches — narrow the keyword list or pick a single binary.'"></p>
+        </div>
+
+        <!-- BUSYBOX -->
+        <div x-show="tab==='busybox'">
+          <template x-if="!busyboxAudit.has_busybox">
+            <div class="empty" x-text="'No busybox binary found in this firmware — nothing to compare applets against.'"></div>
+          </template>
+          <template x-if="busyboxAudit.has_busybox">
+            <div>
+              <h3 style="margin-top:0" x-text="'BusyBox applet comparison'"></h3>
+              <p class="meta" x-text="'busybox binary'+': '+(busyboxAudit.busybox_paths||[]).map(shortPath).join(', ')"></p>
+              <div class="cards">
+                <div class="card"><div class="n sev-low" x-text="busyboxAudit.compiled_in.length"></div><div class="l" x-text="'Applets compiled in'"></div></div>
+                <div class="card"><div class="n sev-crit" x-text="busyboxAudit.missing.length"></div><div class="l" x-text="'Missing reference applets'"></div></div>
+              </div>
+
+              <details style="margin:14px 0">
+                <summary style="cursor:pointer;color:var(--muted)" x-text="'Show compiled-in applets'"></summary>
+                <div class="kwrow" style="margin-top:10px">
+                  <template x-for="a in busyboxAudit.compiled_in" :key="a">
+                    <span class="chip ok" x-text="a"></span>
+                  </template>
+                </div>
+              </details>
+
+              <h4 x-text="'Missing applets'"></h4>
+              <p class="meta" x-text="'Reference BusyBox applets not found as compiled-in strings in this busybox build — could be deliberate hardening, or something stripped for other reasons. Heuristic (string-based), not exact.'"></p>
+              <template x-if="!busyboxAudit.missing.length"><div class="empty" x-text="'None — every reference applet was found.'"></div></template>
+              <div class="kwrow" x-show="busyboxAudit.missing.length">
+                <template x-for="a in busyboxAudit.missing" :key="a">
+                  <span class="chip bad" x-text="a"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <h3 x-text="'Extra commands beyond BusyBox'"></h3>
+          <p class="meta" x-text="'Standalone executables under any bin/sbin directory whose name isn\u0027t one of this busybox build\u0027s compiled-in applets — across every such directory in the tree, not just the top-level /bin, /sbin.'"></p>
+          <div class="filters">
+            <select x-model="busyboxDirFilter">
+              <option value="" x-text="'All bin/sbin directories'"></option>
+              <template x-for="d in extraCommandDirs" :key="d">
+                <option :value="d" x-text="d"></option>
+              </template>
+            </select>
+            <input type="text" x-model="busyboxQuery" :placeholder="'filter by name or path…'">
+            <span class="count" x-text="filteredExtraCommands.length"></span>
+          </div>
+          <template x-if="!extraCommands.length"><div class="empty" x-text="'No extra commands found beyond busybox.'"></div></template>
+          <template x-if="extraCommands.length && !filteredExtraCommands.length"><div class="empty" x-text="'No files found in this target.'"></div></template>
+          <div class="table-wrap" x-show="filteredExtraCommands.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Directory'"></th>
+                <th x-text="'Name'"></th>
+                <th x-text="'Kind'"></th>
+                <th x-text="'Path'"></th>
+              </tr></thead>
+              <template x-for="c in filteredExtraCommands" :key="c.path">
+                <tbody>
+                  <tr>
+                    <td class="path" x-text="c.dir"></td>
+                    <td x-text="c.name"></td>
+                    <td><span class="chip" :class="fileKindChipClass(c.kind)" x-text="fileKindLabel(c.kind)"></span></td>
+                    <td class="path" :title="c.path"><button class="path-action" :title="c.path" :disabled="!previewableKind(c.kind)" @click="openFilePreview(c)" x-text="(previewableKind(c.kind) ? (filePreviewPath===c.path ? '▾ ' : '▸ ') : '')+shortPath(c.path)"></button></td>
+                  </tr>
+                  <!-- Preview renders directly under the clicked row, same
+                       as the Files tab, instead of at the bottom of the list. -->
+                  <tr x-show="filePreviewPath === c.path">
+                    <td colspan="4" class="preview-cell">
+                      <div class="filters" style="margin-bottom:8px">
+                        <span class="path" style="flex:1" x-text="c.path"></span>
+                        <button class="ghost sm" @click="filePreviewPath=''" x-text="'Close'"></button>
+                      </div>
+                      <template x-if="filePreviewLoading"><div class="empty" x-text="'Loading…'"></div></template>
+                      <template x-if="!filePreviewLoading && filePreviewEntry && filePreviewEntry.error">
+                        <div class="empty" x-text="'Could not load preview'+': '+filePreviewEntry.error"></div>
+                      </template>
+                      <template x-if="!filePreviewLoading && filePreviewEntry && !filePreviewEntry.error">
+                        <div>
+                          <pre class="code" style="max-height:50vh" x-html="highlightedPreview"></pre>
+                          <p class="meta" x-show="filePreviewEntry?.truncated" x-text="'(content truncated — file is larger than the preview limit)'"></p>
+                        </div>
+                      </template>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
+            </table>
+          </div>
+          <p class="meta" x-show="busyboxAudit.truncated_extra" x-text="'List truncated — too many extra commands to show all.'"></p>
+
+          <h3 x-text="'/etc/init.d scripts'"></h3>
+          <template x-if="!initScripts.length"><div class="empty" x-text="'No init.d scripts found in this target.'"></div></template>
+          <template x-for="s in initScripts" :key="s.path">
+            <details style="margin-bottom:8px">
+              <summary style="cursor:pointer" x-text="shortPath(s.path)"></summary>
+              <pre class="code" style="max-height:50vh" x-html="highlightPreview(s.content, detectPreviewLang(s.path, s.content))"></pre>
+              <p class="meta" x-show="s.truncated" x-text="'(content truncated)'"></p>
+            </details>
+          </template>
+          <p class="meta" x-show="busyboxAudit.truncated_init" x-text="'Script list truncated — too many init.d scripts to show all.'"></p>
+        </div>
+
+        <!-- SERVICES -->
+        <div x-show="tab==='services'">
+          <h3 style="margin-top:0" x-text="'Network service identification'"></h3>
+          <p class="meta" x-text="'Static analysis, not a live scan — which known web/SSH/FTP/Telnet/SOAP/DNS/SNMP/UPnP/WiFi-management daemon is actually present, its version (from an embedded banner string, never guessed), and its best-effort inferred listening port(s) (config file / inetd.conf-style entry / init.d start flag / well-known default, in that order of preference).'"></p>
+          <div class="filters">
+            <select x-model="servicesCategoryFilter">
+              <option value="" x-text="'All categories'"></option>
+              <template x-for="c in serviceCategories" :key="c">
+                <option :value="c" x-text="c"></option>
+              </template>
+            </select>
+            <input type="text" x-model="servicesQuery" :placeholder="'filter by name, version or path…'">
+            <span class="count" x-text="filteredServices.length"></span>
+          </div>
+          <template x-if="!services.length"><div class="empty">No known services were identified in this analysis. This does not establish that the device has no network services.</div></template>
+          <template x-if="services.length && !filteredServices.length"><div class="empty">No services match your filters. Clear the service search or category to see all detected services.</div></template>
+          <div class="table-wrap" x-show="filteredServices.length">
+            <table class="bins">
+              <thead><tr>
+                <th x-text="'Service'"></th>
+                <th x-text="'Category'"></th>
+                <th x-text="'Version'"></th>
+                <th x-text="'Port(s)'"></th>
+                <th x-text="'Port source'"></th>
+                <th x-text="'Path'"></th>
+              </tr></thead>
+              <template x-for="s in filteredServices" :key="s.binary_path+'@'+s.name">
+                <tbody>
+                  <tr>
+                    <td x-text="s.name"></td>
+                    <td><span class="chip neutral" x-text="s.category"></span></td>
+                    <td x-text="s.version || '—'"></td>
+                    <td x-text="(s.ports&&s.ports.length) ? s.ports.join(', ') : '—'"></td>
+                    <td x-text="s.port_source ? servicePortSourceLabel(s.port_source) : '—'"></td>
+                    <td class="path" :title="s.binary_path" x-text="shortPath(s.binary_path)"></td>
+                  </tr>
+                </tbody>
+              </template>
+            </table>
+          </div>
+        </div>
+
+        <!-- AI ANALYSIS -->
+        <div x-show="tab==='ai'">
+          <h3 style="margin-top:0" x-text="'AI Analysis'"></h3>
+          <p class="meta" x-text="'AI-assisted triage over this job\u0027s findings — pick a configured provider and run an on-demand analysis. The AI only ever reads findings already computed by the scan; it does not re-scan the firmware.'"></p>
+          <template x-if="!aiProviders.length">
+            <div class="empty">
+              <span x-text="'No AI provider configured yet.'"></span>
+              <button class="ghost sm" style="margin-left:8px" @click="openAISettings()" x-text="'AI settings'"></button>
+            </div>
+          </template>
+          <div class="filters" x-show="aiProviders.length">
+            <select x-model="aiSelectedProviderId" style="max-width:280px">
+              <template x-for="p in aiProviders" :key="p.id">
+                <option :value="p.id" x-text="p.name + ' (' + p.model + ')'"></option>
+              </template>
+            </select>
+            <button @click="runAIAnalysis()" :disabled="aiRunning || !aiSelectedProviderId"
+                    x-text="aiRunning ? 'Analyzing… this can take up to two minutes.' : 'Run AI analysis'"></button>
+          </div>
+          <p class="sev-crit" x-show="aiError" x-text="aiError"></p>
+          <template x-if="aiAnalysis && viewAIAnalysis.status && viewAIAnalysis.status !== 'none'">
+            <div>
+              <p class="meta">
+                <span x-text="'Result from' + ': ' + viewAIAnalysis.provider_name + ' (' + viewAIAnalysis.model + ')'"></span>
+                <span x-show="aiPromptMetaText" x-text="aiPromptMetaText"></span>
+              </p>
+              <div class="aiLive" x-show="viewAIAnalysis.status === 'running'">
+                <span class="pulse"></span>
+                <span class="phase" x-text="aiPhaseText"></span>
+                <span class="elapsed" x-show="aiElapsed > 0" x-text="formatElapsed(aiElapsed)"></span>
+                <span class="sweep"><i></i></span>
+              </div>
+              <div class="aiToolLog" x-show="aiToolActivity.length">
+                <div class="hd" x-text="'Data the AI pulled'"></div>
+                <template x-for="(t, i) in aiToolActivity" :key="i">
+                  <div class="row">
+                    <span class="tick">✓</span>
+                    <span class="mono nm" x-text="t.name"></span>
+                    <span x-text="t.detail"></span>
+                  </div>
+                </template>
+              </div>
+              <template x-if="viewAIAnalysis.status === 'error'">
+                <p class="sev-crit" x-text="viewAIAnalysis.error"></p>
+              </template>
+              <template x-if="viewAIAnalysis.content || viewAIAnalysis.status === 'running'">
+                <pre class="code" style="max-height:60vh; white-space:pre-wrap"
+                     x-ref="aiOut" @scroll="onAIOutScroll()"><span x-text="viewAIAnalysis.content"></span><span
+                     class="aiCaret" x-show="viewAIAnalysis.status === 'running'"></span></pre>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        </div><!-- /.pane -->
+      </div>
+    </template>
+  </section>
+</main>
+<div class="notification" x-show="notice" style="display:none" role="status" aria-live="polite"><span x-text="notice"></span><button class="ghost sm" @click="notice=''" aria-label="Dismiss notification">Dismiss</button></div>
+
+<script src="/vendor/alpine.min.js" defer></script>
+<script src="/workbench.js"></script>
+<script src="/interface.js" defer></script>
+</body>
+</html>

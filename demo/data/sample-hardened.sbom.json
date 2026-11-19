@@ -1,0 +1,36 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:4168eac5-53e5-43b2-9d0a-f6784e38d172",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-19T06:50:04.043762+00:00",
+    "tools": [
+      {
+        "vendor": "defile",
+        "name": "defile",
+        "version": "2.8.0+defile.2"
+      }
+    ],
+    "component": {
+      "type": "firmware",
+      "name": "samples/sample-hardened"
+    },
+    "properties": [
+      {
+        "name": "defile:demonstration",
+        "value": "Engine-generated heuristic results. No vendor firmware or OpenSSL library is bundled; version-banner CVE matches are demonstration signals, not vulnerability discoveries."
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "openssl",
+      "version": "1.0.2h",
+      "bom-ref": "openssl@1.0.2h",
+      "purl": "pkg:generic/openssl@1.0.2h"
+    }
+  ],
+  "vulnerabilities": []
+}

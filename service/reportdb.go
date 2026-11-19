@@ -1,0 +1,1644 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+// ReportDB stores per-job scan results (findings, binaries, scripts,
+// components) in SQLite instead of one flat JSON blob per job. The old
+// approach — the whole report shipped to the browser in a single response,
+// rendered in full by Alpine's reactivity — is what crashed the tab on a
+// large scan (thousands of findings, megabytes of extracted strings); this
+// lets the API serve paginated, filtered slices instead.
+//
+// Job lifecycle metadata (Store, in job.go) stays JSON-file-backed: it's
+// small and bounded by job count, not by scan size, so it was never the
+// crash source and doesn't need to move.
+type ReportDB struct {
+	mu sync.Mutex // serializes writes; modernc.org/sqlite allows one writer at a time anyway
+	db *sql.DB
+}
+
+// rawReport mirrors defile/model.py's AnalysisReport.to_dict() shape closely
+// enough to unmarshal; nested list-valued fields are kept as RawMessage and
+// stored as JSON text columns rather than modeled further in Go, since the
+// API only ever needs to hand them back to the browser verbatim.
+type rawReport struct {
+	Target           string            `json:"target"`
+	ToolVersion      string            `json:"tool_version"`
+	GeneratedAt      string            `json:"generated_at"`
+	KernelVersion    string            `json:"kernel_version"`
+	ArchSummary      string            `json:"arch_summary"`
+	EndianSummary    string            `json:"endian_summary"`
+	FileCount        int               `json:"file_count"`
+	FirmwareSize     int64             `json:"firmware_size"`
+	CertCount        int               `json:"cert_count"`
+	RsaCertCount     int               `json:"rsa_cert_count"`
+	DirBreakdown     json.RawMessage   `json:"dir_breakdown"`
+	DirChartRenderer string            `json:"dir_chart_renderer"`
+	Binaries         []json.RawMessage `json:"binaries"`
+	Scripts          []json.RawMessage `json:"scripts"`
+	Components       []json.RawMessage `json:"components"`
+	Findings         []rawFinding      `json:"findings"`
+	Files            []json.RawMessage `json:"files"`
+	BusyboxAudit     json.RawMessage   `json:"busybox_audit"`
+	Services         json.RawMessage   `json:"services"`
+}
+
+type rawFinding struct {
+	ID          string          `json:"id"`
+	Title       string          `json:"title"`
+	VulnClass   string          `json:"vuln_class"`
+	Severity    string          `json:"severity"`
+	Confidence  float64         `json:"confidence"`
+	Component   string          `json:"component"`
+	Rule        string          `json:"rule"`
+	Description string          `json:"description"`
+	Remediation string          `json:"remediation"`
+	CVEIDs      json.RawMessage `json:"cve_ids"`
+	Evidence    json.RawMessage `json:"evidence"`
+	Triage      string          `json:"triage"`
+	Pseudocode  string          `json:"pseudocode"`
+}
+
+func NewReportDB(path string) (*ReportDB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	// One writer at a time regardless of Go-level goroutines (mu above already
+	// serializes our own writes; this also protects against sqlite's own
+	// "database is locked" errors under WAL from concurrent readers).
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(`PRAGMA journal_mode=WAL`); err != nil {
+		return nil, err
+	}
+	r := &ReportDB{db: db}
+	if err := r.migrate(); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (r *ReportDB) migrate() error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS report_meta (
+			job_id TEXT PRIMARY KEY,
+			target TEXT, tool_version TEXT, generated_at TEXT,
+			kernel_version TEXT, arch_summary TEXT, endian_summary TEXT,
+			file_count INTEGER, firmware_size INTEGER,
+			busybox_audit TEXT,
+			cert_count INTEGER, rsa_cert_count INTEGER,
+			services TEXT,
+			dir_breakdown TEXT, dir_chart_renderer TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS findings (
+			job_id TEXT, id TEXT, title TEXT, vuln_class TEXT, severity TEXT,
+			confidence REAL, component TEXT, rule TEXT, description TEXT,
+			remediation TEXT, cve_ids TEXT, evidence TEXT, triage TEXT, pseudocode TEXT,
+			PRIMARY KEY (job_id, id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_findings_job ON findings(job_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_findings_job_sev ON findings(job_id, severity)`,
+		`CREATE TABLE IF NOT EXISTS binaries (
+			job_id TEXT, path TEXT, data TEXT,
+			PRIMARY KEY (job_id, path)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_binaries_job ON binaries(job_id)`,
+		`CREATE TABLE IF NOT EXISTS scripts (
+			job_id TEXT, path TEXT, data TEXT,
+			PRIMARY KEY (job_id, path)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_scripts_job ON scripts(job_id)`,
+		`CREATE TABLE IF NOT EXISTS components (
+			job_id TEXT, seq INTEGER, data TEXT,
+			PRIMARY KEY (job_id, seq)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_components_job ON components(job_id)`,
+		// Every file under the scanned target (FR-INV), not just the ELF
+		// binaries/recognized scripts subset -- what actually answers "did
+		// the scan cover this whole directory" for a human looking at results.
+		`CREATE TABLE IF NOT EXISTS files (
+			job_id TEXT, path TEXT, kind TEXT, data TEXT,
+			PRIMARY KEY (job_id, path)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_files_job ON files(job_id)`,
+		// AI provider profiles (global, not per-job) and cached AI analysis
+		// results (per-job, latest run only -- see ai.go for how these are used).
+		`CREATE TABLE IF NOT EXISTS ai_providers (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			host TEXT NOT NULL,
+			api_key_enc TEXT NOT NULL,
+			key_last4 TEXT NOT NULL,
+			model TEXT NOT NULL,
+			kind TEXT NOT NULL DEFAULT 'openai',
+			max_tokens INTEGER NOT NULL DEFAULT 8192,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS ai_analyses (
+			job_id TEXT PRIMARY KEY,
+			provider_id TEXT,
+			provider_name TEXT,
+			model TEXT,
+			status TEXT NOT NULL,
+			content TEXT,
+			error TEXT,
+			prompt_meta TEXT,
+			started_at TEXT NOT NULL,
+			finished_at TEXT
+		)`,
+	}
+	for _, s := range stmts {
+		if _, err := r.db.Exec(s); err != nil {
+			return fmt.Errorf("migrate: %s: %w", s, err)
+		}
+	}
+
+	// CREATE TABLE IF NOT EXISTS above only adds new columns for a brand new
+	// database file; a database created before a column existed needs an
+	// explicit ALTER TABLE. SQLite has no "ADD COLUMN IF NOT EXISTS", so
+	// just ignore the "duplicate column" error a database that already has
+	// it produces. Must run before idx_files_job_kind below -- that index
+	// depends on the "kind" column existing, which for an upgraded (not
+	// brand new) database is only true after this ALTER TABLE runs.
+	alters := []string{
+		`ALTER TABLE report_meta ADD COLUMN busybox_audit TEXT`,
+		`ALTER TABLE files ADD COLUMN kind TEXT`,
+		`ALTER TABLE report_meta ADD COLUMN cert_count INTEGER`,
+		`ALTER TABLE report_meta ADD COLUMN rsa_cert_count INTEGER`,
+		`ALTER TABLE report_meta ADD COLUMN services TEXT`,
+		// Rootfs directory-composition pie chart (FR-INV dashboard visual):
+		// byte share per top-level directory, and which renderer ("cuda"/
+		// "cpu") actually produced the chart PNG -- see defile/report/piechart.py.
+		`ALTER TABLE report_meta ADD COLUMN dir_breakdown TEXT`,
+		`ALTER TABLE report_meta ADD COLUMN dir_chart_renderer TEXT`,
+		// kind distinguishes the wire protocol to speak to a provider ("openai"
+		// -- Bearer auth, /chat/completions -- vs "anthropic" -- x-api-key
+		// auth, /messages, a separate top-level "system" field). Any row
+		// written before this column existed predates the distinction and was
+		// necessarily OpenAI-compatible, so 'openai' is the correct backfill,
+		// not just a placeholder.
+		`ALTER TABLE ai_providers ADD COLUMN kind TEXT NOT NULL DEFAULT 'openai'`,
+		// max_tokens is the per-provider cap on generated output length --
+		// user-configurable (see ai.go's aiMaxOutputTokens for the shared
+		// default new rows get). A too-low cap was observed silently
+		// truncating analyses mid-sentence, or on models that spend part of
+		// their budget on extended thinking, exhausting it before any answer
+		// text was produced at all -- letting it be tuned per provider/model
+		// is the fix, not just raising one hardcoded number.
+		`ALTER TABLE ai_providers ADD COLUMN max_tokens INTEGER NOT NULL DEFAULT 8192`,
+	}
+	for _, s := range alters {
+		if _, err := r.db.Exec(s); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return fmt.Errorf("migrate: %s: %w", s, err)
+		}
+	}
+
+	if _, err := r.db.Exec(`CREATE INDEX IF NOT EXISTS idx_files_job_kind ON files(job_id, kind)`); err != nil {
+		return fmt.Errorf("migrate: create idx_files_job_kind: %w", err)
+	}
+
+	if err := r.reconcileInterruptedAnalyses(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// reconcileInterruptedAnalyses closes out AI analyses left in 'running' by
+// a previous process. A streaming run is owned by the single in-flight HTTP
+// request driving it (see runAIAnalysis in ai.go), so if the service exits
+// mid-stream -- crash, restart, deploy -- nothing is left to ever move that
+// row to done/error, and the UI would sit on a spinner for that job
+// forever. Nothing can be resumed (the provider connection is long gone),
+// so the honest resolution is to mark it interrupted and keep whatever
+// partial content had been persisted, which the user can then re-run.
+//
+// Safe to run unconditionally at startup: any row still 'running' at the
+// moment a process begins cannot belong to that process.
+func (r *ReportDB) reconcileInterruptedAnalyses() error {
+	res, err := r.db.Exec(`UPDATE ai_analyses SET status='error', finished_at=?,
+		error='Analysis was interrupted when the service restarted. Any text below is the partial result; re-run to get a complete analysis.'
+		WHERE status='running'`, time.Now().UTC().Format(time.RFC3339))
+	if err != nil {
+		return fmt.Errorf("migrate: reconcile interrupted analyses: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("marked %d AI analysis run(s) as interrupted (left 'running' by a previous process)", n)
+	}
+	return nil
+}
+
+// Ingest parses one job's report.json and replaces any existing rows for
+// jobID with its contents, applying triageOverlay (fingerprint id -> state)
+// so a decision made on an earlier scan of the same content is immediately
+// reflected rather than reverting to "new". Returns (binaries, findings,
+// highCrit) counts, replacing the old file-based summarize().
+func (r *ReportDB) Ingest(jobID string, reportJSON []byte, triageOverlay map[string]string) (bins, finds, highCrit int, err error) {
+	var rep rawReport
+	if err = json.Unmarshal(reportJSON, &rep); err != nil {
+		return
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	if err = deleteJobRows(tx, jobID); err != nil {
+		return
+	}
+
+	_, err = tx.Exec(`INSERT INTO report_meta
+		(job_id, target, tool_version, generated_at, kernel_version, arch_summary, endian_summary, file_count, firmware_size, busybox_audit, cert_count, rsa_cert_count, services, dir_breakdown, dir_chart_renderer)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		jobID, rep.Target, rep.ToolVersion, rep.GeneratedAt,
+		rep.KernelVersion, rep.ArchSummary, rep.EndianSummary, rep.FileCount, rep.FirmwareSize,
+		string(orEmptyObject(rep.BusyboxAudit)), rep.CertCount, rep.RsaCertCount,
+		string(orEmptyArray(rep.Services)), string(orEmptyArray(rep.DirBreakdown)), rep.DirChartRenderer)
+	if err != nil {
+		return
+	}
+
+	// OR REPLACE, not a plain INSERT: Finding.fingerprint() (defile/model.py) is
+	// deliberately independent of severity/description so unrelated findings
+	// that reduce to the same (rule, vuln_class, evidence, cve_ids) tuple are
+	// meant to collapse onto one id -- e.g. cve-bin-tool occasionally reports
+	// the same product/version/CVE via more than one detection path with
+	// identical evidence. A real large scan hit exactly this (3000+ findings)
+	// and the plain INSERT's PRIMARY KEY (job_id, id) violation crashed the
+	// whole ingest instead of just keeping the last of the duplicate rows.
+	findingStmt, err := tx.Prepare(`INSERT OR REPLACE INTO findings
+		(job_id, id, title, vuln_class, severity, confidence, component, rule, description, remediation, cve_ids, evidence, triage, pseudocode)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer findingStmt.Close()
+
+	for _, f := range rep.Findings {
+		triage := f.Triage
+		if st, ok := triageOverlay[f.ID]; ok {
+			triage = st
+		}
+		if _, err = findingStmt.Exec(jobID, f.ID, f.Title, f.VulnClass, f.Severity, f.Confidence,
+			f.Component, f.Rule, f.Description, f.Remediation,
+			string(orEmptyArray(f.CVEIDs)), string(orEmptyArray(f.Evidence)), triage, f.Pseudocode); err != nil {
+			return
+		}
+	}
+
+	// OR REPLACE here too: same defensive reasoning as findings above, in
+	// case a symlink/hardlink or an extraction quirk ever yields the same
+	// path twice in one report.
+	binStmt, err := tx.Prepare(`INSERT OR REPLACE INTO binaries (job_id, path, data) VALUES (?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer binStmt.Close()
+	for _, b := range rep.Binaries {
+		path := jsonStringField(b, "path")
+		if _, err = binStmt.Exec(jobID, path, string(b)); err != nil {
+			return
+		}
+	}
+
+	scriptStmt, err := tx.Prepare(`INSERT OR REPLACE INTO scripts (job_id, path, data) VALUES (?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer scriptStmt.Close()
+	for _, s := range rep.Scripts {
+		path := jsonStringField(s, "path")
+		if _, err = scriptStmt.Exec(jobID, path, string(s)); err != nil {
+			return
+		}
+	}
+
+	compStmt, err := tx.Prepare(`INSERT INTO components (job_id, seq, data) VALUES (?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer compStmt.Close()
+	for i, c := range rep.Components {
+		if _, err = compStmt.Exec(jobID, i, string(c)); err != nil {
+			return
+		}
+	}
+
+	fileStmt, err := tx.Prepare(`INSERT OR REPLACE INTO files (job_id, path, kind, data) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer fileStmt.Close()
+	for _, f := range rep.Files {
+		path := jsonStringField(f, "path")
+		kind := jsonStringField(f, "kind")
+		if _, err = fileStmt.Exec(jobID, path, kind, string(f)); err != nil {
+			return
+		}
+	}
+
+	// Counted from the actual rows, not the loops above: OR REPLACE means a
+	// duplicate id/path in the source report collapses to one row, and a
+	// loop-iteration count would over-report relative to what's really there.
+	if err = tx.QueryRow(`SELECT COUNT(*) FROM binaries WHERE job_id = ?`, jobID).Scan(&bins); err != nil {
+		return
+	}
+	if err = tx.QueryRow(`SELECT COUNT(*) FROM findings WHERE job_id = ?`, jobID).Scan(&finds); err != nil {
+		return
+	}
+	if err = tx.QueryRow(`SELECT COUNT(*) FROM findings WHERE job_id = ? AND severity IN ('critical','high')`, jobID).Scan(&highCrit); err != nil {
+		return
+	}
+
+	err = tx.Commit()
+	return
+}
+
+func orEmptyArray(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return json.RawMessage("[]")
+	}
+	return raw
+}
+
+func orEmptyObject(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return json.RawMessage("{}")
+	}
+	return raw
+}
+
+func jsonStringField(raw json.RawMessage, field string) string {
+	var m map[string]json.RawMessage
+	if json.Unmarshal(raw, &m) != nil {
+		return ""
+	}
+	var s string
+	json.Unmarshal(m[field], &s)
+	return s
+}
+
+func deleteJobRows(tx *sql.Tx, jobID string) error {
+	for _, table := range []string{"report_meta", "findings", "binaries", "scripts", "components", "files", "ai_analyses"} {
+		if _, err := tx.Exec(`DELETE FROM `+table+` WHERE job_id = ?`, jobID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteJob removes every row belonging to jobID (job deletion/cleanup).
+func (r *ReportDB) DeleteJob(jobID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := deleteJobRows(tx, jobID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// CopyJob duplicates every row from fromID to toID (dedup cache-hit path:
+// the new job's target was byte-identical to a previously-completed one, so
+// its results are too — copying keeps "every job owns its own report rows"
+// true everywhere else in this file without a special-cased alias path).
+func (r *ReportDB) CopyJob(fromID, toID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := deleteJobRows(tx, toID); err != nil {
+		return err
+	}
+	stmts := []struct{ table, cols string }{
+		{"report_meta", "target, tool_version, generated_at, kernel_version, arch_summary, endian_summary, file_count, firmware_size, busybox_audit, cert_count, rsa_cert_count, services, dir_breakdown, dir_chart_renderer"},
+		{"findings", "id, title, vuln_class, severity, confidence, component, rule, description, remediation, cve_ids, evidence, triage, pseudocode"},
+		{"binaries", "path, data"},
+		{"scripts", "path, data"},
+		{"components", "seq, data"},
+		{"files", "path, kind, data"},
+	}
+	for _, s := range stmts {
+		q := fmt.Sprintf(`INSERT INTO %s (job_id, %s) SELECT ?, %s FROM %s WHERE job_id = ?`,
+			s.table, s.cols, s.cols, s.table)
+		if _, err := tx.Exec(q, toID, fromID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// Summary is the lightweight, always-fully-loaded aggregate the dashboard
+// renders from, replacing client-side `findings.length`/`.filter().length`
+// now that the full findings array isn't held in the browser anymore.
+type Summary struct {
+	Target           string          `json:"target"`
+	ToolVersion      string          `json:"tool_version"`
+	GeneratedAt      string          `json:"generated_at"`
+	KernelVersion    string          `json:"kernel_version"`
+	ArchSummary      string          `json:"arch_summary"`
+	EndianSummary    string          `json:"endian_summary"`
+	FileCount        int             `json:"file_count"`
+	FirmwareSize     int64           `json:"firmware_size"`
+	CertCount        int             `json:"cert_count"`
+	RsaCertCount     int             `json:"rsa_cert_count"`
+	DirBreakdown     json.RawMessage `json:"dir_breakdown"`
+	DirChartRenderer string          `json:"dir_chart_renderer"`
+	Findings         int             `json:"findings"`
+	Binaries         int             `json:"binaries"`
+	Scripts          int             `json:"scripts"`
+	Components       int             `json:"components"`
+	BySeverity       map[string]int  `json:"by_severity"`
+	ByVulnClass      map[string]int  `json:"by_vuln_class"`
+	CVECount         int             `json:"cve_count"`
+	ServiceCount     int             `json:"service_count"`
+	OpenPortCount    int             `json:"open_port_count"`
+}
+
+func (r *ReportDB) GetSummary(jobID string) (*Summary, error) {
+	s := &Summary{BySeverity: map[string]int{}, ByVulnClass: map[string]int{}}
+	row := r.db.QueryRow(`SELECT target, tool_version, generated_at, kernel_version, arch_summary,
+		endian_summary, file_count, firmware_size, cert_count, rsa_cert_count, services, dir_breakdown, dir_chart_renderer
+		FROM report_meta WHERE job_id = ?`, jobID)
+	var kv, as, es, svc, dbk, dcr sql.NullString
+	var fc, fs, cc, rcc sql.NullInt64
+	if err := row.Scan(&s.Target, &s.ToolVersion, &s.GeneratedAt, &kv, &as, &es, &fc, &fs, &cc, &rcc, &svc, &dbk, &dcr); err != nil {
+		if err == sql.ErrNoRows {
+			return s, nil // report not ingested (yet) — empty summary, not an error
+		}
+		return nil, err
+	}
+	s.KernelVersion, s.ArchSummary, s.EndianSummary = kv.String, as.String, es.String
+	s.FileCount, s.FirmwareSize = int(fc.Int64), fs.Int64
+	s.CertCount, s.RsaCertCount = int(cc.Int64), int(rcc.Int64)
+	s.DirBreakdown = orEmptyArray(json.RawMessage(dbk.String))
+	s.DirChartRenderer = dcr.String
+	if svc.Valid && svc.String != "" {
+		var services []struct {
+			Ports []int `json:"ports"`
+		}
+		if json.Unmarshal([]byte(svc.String), &services) == nil {
+			s.ServiceCount = len(services)
+			distinctPorts := map[int]struct{}{}
+			for _, svc := range services {
+				for _, p := range svc.Ports {
+					distinctPorts[p] = struct{}{}
+				}
+			}
+			s.OpenPortCount = len(distinctPorts)
+		}
+	}
+
+	rows, err := r.db.Query(`SELECT severity, COUNT(*) FROM findings WHERE job_id = ? GROUP BY severity`, jobID)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var sev string
+		var n int
+		if rows.Scan(&sev, &n) == nil {
+			s.BySeverity[sev] = n
+			s.Findings += n
+		}
+	}
+	rows.Close()
+
+	rows, err = r.db.Query(`SELECT vuln_class, COUNT(*) FROM findings WHERE job_id = ? GROUP BY vuln_class`, jobID)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var vc string
+		var n int
+		if rows.Scan(&vc, &n) == nil {
+			s.ByVulnClass[vc] = n
+		}
+	}
+	rows.Close()
+
+	r.db.QueryRow(`SELECT COUNT(*) FROM binaries WHERE job_id = ?`, jobID).Scan(&s.Binaries)
+	r.db.QueryRow(`SELECT COUNT(*) FROM scripts WHERE job_id = ?`, jobID).Scan(&s.Scripts)
+	r.db.QueryRow(`SELECT COUNT(*) FROM components WHERE job_id = ?`, jobID).Scan(&s.Components)
+	// A finding "has a CVE" iff cve_ids is a non-empty JSON array ("[]" means none).
+	r.db.QueryRow(`SELECT COUNT(*) FROM findings WHERE job_id = ? AND cve_ids != '[]' AND cve_ids != ''`, jobID).Scan(&s.CVECount)
+
+	return s, nil
+}
+
+// FindingQuery is the paginated/filtered findings request, mirroring what the
+// findings tab's filter bar used to do entirely client-side.
+type FindingQuery struct {
+	Offset     int
+	Limit      int
+	NoLimit    bool     // export paths: return every matching row, not just one page
+	Severities []string // empty = all
+	IDs        []string // exact fingerprint ids; empty = no id filter (used by the AI get_finding_detail tool)
+	VulnClass  string
+	Triage     string
+	MinConf    float64
+	Q          string // free-text match against title/description/component
+	Sort       string // "severity" | "confidence" | "component"
+}
+
+// ListFindings returns (page, total matching the filters) — total is what
+// the frontend needs to render "page X of Y" / know when to stop paging.
+func (r *ReportDB) ListFindings(jobID string, q FindingQuery) ([]map[string]any, int, error) {
+	where := []string{"job_id = ?"}
+	args := []any{jobID}
+
+	if len(q.Severities) > 0 {
+		ph := make([]string, len(q.Severities))
+		for i, sev := range q.Severities {
+			ph[i] = "?"
+			args = append(args, sev)
+		}
+		where = append(where, "severity IN ("+strings.Join(ph, ",")+")")
+	}
+	if len(q.IDs) > 0 {
+		ph := make([]string, len(q.IDs))
+		for i, id := range q.IDs {
+			ph[i] = "?"
+			args = append(args, id)
+		}
+		where = append(where, "id IN ("+strings.Join(ph, ",")+")")
+	}
+	if q.VulnClass != "" {
+		where = append(where, "vuln_class = ?")
+		args = append(args, q.VulnClass)
+	}
+	if q.Triage != "" {
+		where = append(where, "triage = ?")
+		args = append(args, q.Triage)
+	}
+	if q.MinConf > 0 {
+		where = append(where, "confidence >= ?")
+		args = append(args, q.MinConf)
+	}
+	if q.Q != "" {
+		where = append(where, "(title LIKE ? OR description LIKE ? OR component LIKE ? OR cve_ids LIKE ? OR evidence LIKE ?)")
+		like := "%" + q.Q + "%"
+		args = append(args, like, like, like, like, like)
+	}
+	whereClause := strings.Join(where, " AND ")
+
+	var total int
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM findings WHERE `+whereClause, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	orderBy := "component ASC"
+	switch q.Sort {
+	case "confidence":
+		orderBy = "confidence DESC"
+	case "severity":
+		orderBy = `CASE severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END DESC, confidence DESC`
+	}
+
+	query := `SELECT id, title, vuln_class, severity, confidence, component, rule,
+		description, remediation, cve_ids, evidence, triage, pseudocode FROM findings
+		WHERE ` + whereClause + ` ORDER BY ` + orderBy
+	queryArgs := args
+	if q.NoLimit {
+		// Export paths (ExportFull, "export filtered" in the UI): every
+		// matching row, however many there are -- no LIMIT clause at all,
+		// not just a bigger one, since a firmware with thousands of
+		// findings must not have its export silently truncated.
+	} else {
+		limit := q.Limit
+		if limit <= 0 || limit > 1000 {
+			limit = 100
+		}
+		query += ` LIMIT ? OFFSET ?`
+		queryArgs = append(args, limit, q.Offset)
+	}
+	rows, err := r.db.Query(query, queryArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []map[string]any
+	for rows.Next() {
+		var id, title, vclass, sev, component, rule, desc, remediation, triage, pseudocode string
+		var conf float64
+		var cveIDs, evidence string
+		if err := rows.Scan(&id, &title, &vclass, &sev, &conf, &component, &rule,
+			&desc, &remediation, &cveIDs, &evidence, &triage, &pseudocode); err != nil {
+			return nil, 0, err
+		}
+		m := map[string]any{
+			"id": id, "title": title, "vuln_class": vclass, "severity": sev,
+			"confidence": conf, "component": component, "rule": rule,
+			"description": desc, "remediation": remediation, "triage": triage,
+			"pseudocode": pseudocode,
+		}
+		m["cve_ids"] = json.RawMessage(cveIDs)
+		m["evidence"] = json.RawMessage(evidence)
+		out = append(out, m)
+	}
+	return out, total, nil
+}
+
+// SetTriageEverywhere updates every stored finding row (across all jobs)
+// whose fingerprint id matches, so a triage decision applies uniformly
+// across re-scans of the same content (FR-VUL-8) without needing a
+// serve-time overlay pass anymore.
+func (r *ReportDB) SetTriageEverywhere(findingID, state string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, err := r.db.Exec(`UPDATE findings SET triage = ? WHERE id = ?`, state, findingID)
+	return err
+}
+
+// AIProvider is the full stored record, including the encrypted key -- only
+// ever used internally (e.g. by runAIAnalysis to decrypt and call out).
+// Never JSON-marshaled directly to an HTTP response; see AIProviderPublic.
+type AIProvider struct {
+	ID        string
+	Name      string
+	Host      string
+	APIKeyEnc string
+	KeyLast4  string
+	Model     string
+	Kind      string // "openai" (default, Bearer auth) | "anthropic" (x-api-key auth, /messages)
+	MaxTokens int    // per-provider cap on generated output length; see ai.go's aiMaxOutputTokens for the default
+	CreatedAt string
+	UpdatedAt string
+}
+
+// AIProviderPublic is what the REST API actually returns -- deliberately
+// has no field capable of holding the plaintext or encrypted key, so a
+// programming mistake can't accidentally leak either one to the browser.
+type AIProviderPublic struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	Model     string `json:"model"`
+	Kind      string `json:"kind"`
+	MaxTokens int    `json:"max_tokens"`
+	KeyLast4  string `json:"key_last4"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func (p AIProvider) Public() AIProviderPublic {
+	return AIProviderPublic{ID: p.ID, Name: p.Name, Host: p.Host, Model: p.Model, Kind: p.Kind, MaxTokens: p.MaxTokens,
+		KeyLast4: p.KeyLast4, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt}
+}
+
+// CreateProvider inserts a new AI provider profile. Callers must populate
+// APIKeyEnc/KeyLast4 (see aicrypto.go) before calling -- ReportDB never
+// touches plaintext key material itself.
+func (r *ReportDB) CreateProvider(p AIProvider) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, err := r.db.Exec(`INSERT INTO ai_providers (id, name, host, api_key_enc, key_last4, model, kind, max_tokens, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.ID, p.Name, p.Host, p.APIKeyEnc, p.KeyLast4, p.Model, p.Kind, p.MaxTokens, p.CreatedAt, p.UpdatedAt)
+	return err
+}
+
+// ListProviders returns every saved provider ordered by name for stable
+// display in the settings panel.
+func (r *ReportDB) ListProviders() ([]AIProvider, error) {
+	rows, err := r.db.Query(`SELECT id, name, host, api_key_enc, key_last4, model, kind, max_tokens, created_at, updated_at
+		FROM ai_providers ORDER BY name ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []AIProvider
+	for rows.Next() {
+		var p AIProvider
+		if err := rows.Scan(&p.ID, &p.Name, &p.Host, &p.APIKeyEnc, &p.KeyLast4, &p.Model, &p.Kind, &p.MaxTokens, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+// GetProvider fetches one provider including its encrypted key, for internal
+// use by runAIAnalysis/fetchAIModels (which decrypt it) -- never returned
+// directly to an HTTP handler's JSON response.
+func (r *ReportDB) GetProvider(id string) (*AIProvider, error) {
+	var p AIProvider
+	err := r.db.QueryRow(`SELECT id, name, host, api_key_enc, key_last4, model, kind, max_tokens, created_at, updated_at
+		FROM ai_providers WHERE id = ?`, id).
+		Scan(&p.ID, &p.Name, &p.Host, &p.APIKeyEnc, &p.KeyLast4, &p.Model, &p.Kind, &p.MaxTokens, &p.CreatedAt, &p.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// UpdateProvider updates name/host/model/kind/maxTokens unconditionally;
+// apiKeyEnc/keyLast4 nil means "keep the existing key" (the edit form
+// leaves the key field blank to mean "unchanged").
+func (r *ReportDB) UpdateProvider(id, name, host, model, kind string, maxTokens int, apiKeyEnc, keyLast4 *string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	if apiKeyEnc != nil {
+		_, err := r.db.Exec(`UPDATE ai_providers SET name=?, host=?, model=?, kind=?, max_tokens=?, api_key_enc=?, key_last4=?, updated_at=? WHERE id=?`,
+			name, host, model, kind, maxTokens, *apiKeyEnc, *keyLast4, now, id)
+		return err
+	}
+	_, err := r.db.Exec(`UPDATE ai_providers SET name=?, host=?, model=?, kind=?, max_tokens=?, updated_at=? WHERE id=?`,
+		name, host, model, kind, maxTokens, now, id)
+	return err
+}
+
+// ReplaceProviderKeyCiphertexts swaps every provider's stored ciphertext in
+// a single transaction, for AI key rotation (see rotateAIKey in
+// aicrypto.go). All-or-nothing by construction: a partial application would
+// leave some providers encrypted under the old key and some under the new,
+// with no way to tell which is which.
+func (r *ReportDB) ReplaceProviderKeyCiphertexts(encByID map[string]string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for id, enc := range encByID {
+		if _, err := tx.Exec(`UPDATE ai_providers SET api_key_enc = ? WHERE id = ?`, enc, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// DeleteProvider removes a provider profile. Any cached analysis that was
+// produced by it keeps its provider_name/model snapshot (still meaningful
+// to display) but has provider_id nulled out, since re-running that
+// analysis is no longer possible once its provider config is gone.
+func (r *ReportDB) DeleteProvider(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE ai_analyses SET provider_id = NULL WHERE provider_id = ?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM ai_providers WHERE id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// AIAnalysis is one job's cached AI-analysis result (at most one row per
+// job -- a re-run overwrites it, see the plan doc for why that's fine here).
+type AIAnalysis struct {
+	JobID        string          `json:"job_id"`
+	ProviderID   *string         `json:"provider_id,omitempty"`
+	ProviderName string          `json:"provider_name"`
+	Model        string          `json:"model"`
+	Status       string          `json:"status"` // running | done | error
+	Content      string          `json:"content,omitempty"`
+	Error        string          `json:"error,omitempty"`
+	PromptMeta   json.RawMessage `json:"prompt_meta,omitempty"`
+	StartedAt    string          `json:"started_at"`
+	FinishedAt   string          `json:"finished_at,omitempty"`
+}
+
+// UpsertAnalysisRunning marks the start of a fresh analysis run, clearing
+// any prior content/error so a page load mid-run shows "running" rather
+// than a stale previous result.
+func (r *ReportDB) UpsertAnalysisRunning(jobID, providerID, providerName, model string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := r.db.Exec(`INSERT INTO ai_analyses (job_id, provider_id, provider_name, model, status, content, error, prompt_meta, started_at, finished_at)
+		VALUES (?, ?, ?, ?, 'running', NULL, NULL, NULL, ?, NULL)
+		ON CONFLICT(job_id) DO UPDATE SET provider_id=excluded.provider_id, provider_name=excluded.provider_name,
+			model=excluded.model, status='running', content=NULL, error=NULL, prompt_meta=NULL,
+			started_at=excluded.started_at, finished_at=NULL`,
+		jobID, providerID, providerName, model, now)
+	return err
+}
+
+// CompleteAnalysis records a successful run's output.
+func (r *ReportDB) CompleteAnalysis(jobID, content string, promptMeta json.RawMessage) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := r.db.Exec(`UPDATE ai_analyses SET status='done', content=?, prompt_meta=?, finished_at=? WHERE job_id=?`,
+		content, string(promptMeta), now, jobID)
+	return err
+}
+
+// UpdateAnalysisContent persists the text streamed so far for a
+// still-running analysis, without touching status/finished_at -- called
+// periodically (throttled, see aiStreamPersistInterval in ai.go) while a
+// streaming run is in progress, so a concurrent GET (a page reload, or
+// another tab watching the same job) sees partial content instead of
+// nothing until the run completes.
+func (r *ReportDB) UpdateAnalysisContent(jobID, content string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, err := r.db.Exec(`UPDATE ai_analyses SET content=? WHERE job_id=?`, content, jobID)
+	return err
+}
+
+// FailAnalysis records a failed run so the UI can show the error instead of
+// silently reverting to "no analysis yet". content is whatever text (if
+// any) had already streamed in before the failure -- preserved rather than
+// discarded, since a partial narrative is still more useful to an analyst
+// than nothing.
+func (r *ReportDB) FailAnalysis(jobID, content, errMsg string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := r.db.Exec(`UPDATE ai_analyses SET status='error', content=?, error=?, finished_at=? WHERE job_id=?`,
+		content, errMsg, now, jobID)
+	return err
+}
+
+// GetAnalysis returns (nil, nil) -- not an error -- when the job has never
+// been analyzed, mirroring GetSummary's "not ingested yet" convention.
+func (r *ReportDB) GetAnalysis(jobID string) (*AIAnalysis, error) {
+	var a AIAnalysis
+	var providerID, content, errMsg, promptMeta, finishedAt sql.NullString
+	err := r.db.QueryRow(`SELECT job_id, provider_id, provider_name, model, status, content, error, prompt_meta, started_at, finished_at
+		FROM ai_analyses WHERE job_id = ?`, jobID).
+		Scan(&a.JobID, &providerID, &a.ProviderName, &a.Model, &a.Status, &content, &errMsg, &promptMeta, &a.StartedAt, &finishedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if providerID.Valid {
+		a.ProviderID = &providerID.String
+	}
+	a.Content = content.String
+	a.Error = errMsg.String
+	a.FinishedAt = finishedAt.String
+	if promptMeta.Valid && promptMeta.String != "" {
+		a.PromptMeta = json.RawMessage(promptMeta.String)
+	}
+	return &a, nil
+}
+
+func paginateRaw(db *sql.DB, table, jobID string, offset, limit int) ([]json.RawMessage, int, error) {
+	var total int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM `+table+` WHERE job_id = ?`, jobID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	if limit <= 0 || limit > 2000 {
+		limit = 500
+	}
+	orderCol := "path"
+	if table == "components" {
+		orderCol = "seq"
+	}
+	rows, err := db.Query(`SELECT data FROM `+table+` WHERE job_id = ? ORDER BY `+orderCol+` LIMIT ? OFFSET ?`,
+		jobID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []json.RawMessage
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, json.RawMessage(data))
+	}
+	return out, total, nil
+}
+
+// listAllRaw returns every row for jobID in table, in one shot -- no LIMIT
+// at all, unlike paginateRaw (which is for the interactive paginated views
+// and caps out at 2000). Used only by ExportFull, where "export" has to mean
+// every row however many there are.
+func listAllRaw(db *sql.DB, table, jobID string) ([]json.RawMessage, error) {
+	orderCol := "path"
+	if table == "components" {
+		orderCol = "seq"
+	}
+	rows, err := db.Query(`SELECT data FROM `+table+` WHERE job_id = ? ORDER BY `+orderCol, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []json.RawMessage
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, err
+		}
+		out = append(out, json.RawMessage(data))
+	}
+	return out, nil
+}
+
+func (r *ReportDB) ListBinaries(jobID string, offset, limit int) ([]json.RawMessage, int, error) {
+	return paginateRaw(r.db, "binaries", jobID, offset, limit)
+}
+
+func (r *ReportDB) ListScripts(jobID string, offset, limit int) ([]json.RawMessage, int, error) {
+	return paginateRaw(r.db, "scripts", jobID, offset, limit)
+}
+
+func (r *ReportDB) ListComponents(jobID string, offset, limit int) ([]json.RawMessage, int, error) {
+	return paginateRaw(r.db, "components", jobID, offset, limit)
+}
+
+// ListFiles returns one page of the `files` table, optionally restricted to
+// a single `kind` ("" = every kind). kind is its own column (extracted from
+// each entry's JSON at Ingest, see jsonStringField(f, "kind") in Ingest)
+// specifically so this is a plain indexed SQL WHERE, not a per-row JSON
+// decode -- lets the Files tab's Kind filter (All/Binary/Script/Config/
+// Symlink/Other) work without loading every row to filter client-side.
+func (r *ReportDB) ListFiles(jobID, kind string, offset, limit int) ([]json.RawMessage, int, error) {
+	where := "job_id = ?"
+	args := []any{jobID}
+	if kind != "" {
+		where += " AND kind = ?"
+		args = append(args, kind)
+	}
+	var total int
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM files WHERE `+where, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	if limit <= 0 || limit > 2000 {
+		limit = 500
+	}
+	rows, err := r.db.Query(`SELECT data FROM files WHERE `+where+` ORDER BY path LIMIT ? OFFSET ?`,
+		append(args, limit, offset)...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []json.RawMessage
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, json.RawMessage(data))
+	}
+	return out, total, nil
+}
+
+// ListFilesAll is ListFiles' "?all=1" counterpart: every matching row, no
+// LIMIT at all (same "export must mean everything" reasoning as listAllRaw).
+func (r *ReportDB) ListFilesAll(jobID, kind string) ([]json.RawMessage, error) {
+	where := "job_id = ?"
+	args := []any{jobID}
+	if kind != "" {
+		where += " AND kind = ?"
+		args = append(args, kind)
+	}
+	rows, err := r.db.Query(`SELECT data FROM files WHERE `+where+` ORDER BY path`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []json.RawMessage
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, err
+		}
+		out = append(out, json.RawMessage(data))
+	}
+	return out, nil
+}
+
+// FileKnown reports whether path was recorded as one of jobID's scanned
+// files (the `files` table, built from the full file listing) -- the Files
+// tab's content-preview endpoint checks this before ever reading from disk,
+// so a preview request can only ever read a path the scan itself already
+// found and already exposed metadata (path/size/md5) for, not an arbitrary
+// server-side path.
+func (r *ReportDB) FileKnown(jobID, path string) (bool, error) {
+	var one int
+	err := r.db.QueryRow(`SELECT 1 FROM files WHERE job_id = ? AND path = ? LIMIT 1`, jobID, path).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// GetBinary returns one binary's full record (including its potentially
+// large strings/functions arrays) by path, for the strings-tab drill-down —
+// deliberately not part of the paginated list response, which callers should
+// assume may omit or truncate large per-item fields in the future.
+func (r *ReportDB) GetBinary(jobID, path string) (json.RawMessage, error) {
+	var data string
+	err := r.db.QueryRow(`SELECT data FROM binaries WHERE job_id = ? AND path = ?`, jobID, path).Scan(&data)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(data), nil
+}
+
+// GetBusyboxAudit returns the busybox-applet audit + bin/sbin extra-command
+// list + /etc/init.d script dump attached to this job's report (see
+// defile/inventory/busybox_audit.py) -- small and un-filtered, unlike
+// findings/files, so it's always returned whole rather than paginated.
+func (r *ReportDB) GetBusyboxAudit(jobID string) (json.RawMessage, error) {
+	var data sql.NullString
+	err := r.db.QueryRow(`SELECT busybox_audit FROM report_meta WHERE job_id = ?`, jobID).Scan(&data)
+	if err == sql.ErrNoRows || !data.Valid || data.String == "" {
+		return json.RawMessage("{}"), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(data.String), nil
+}
+
+// GetServices returns the identified network services (web/SSH/FTP/Telnet/
+// SOAP/DNS/SNMP/UPnP/WiFi daemons -- see defile/inventory/service_id.py) for
+// one job, whole -- small enough (typically single digits to a few dozen
+// entries) that, like busybox_audit, it never needed pagination.
+func (r *ReportDB) GetServices(jobID string) (json.RawMessage, error) {
+	var data sql.NullString
+	err := r.db.QueryRow(`SELECT services FROM report_meta WHERE job_id = ?`, jobID).Scan(&data)
+	if err == sql.ErrNoRows || !data.Valid || data.String == "" {
+		return json.RawMessage("[]"), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(data.String), nil
+}
+
+// ExportFull reconstructs the full AnalysisReport JSON shape (all rows, no
+// pagination) for the download/export path (?format=json&download=1, plus
+// the md/sbom renders which need the whole thing) — used rarely, unlike the
+// interactive views above.
+func (r *ReportDB) ExportFull(jobID string) ([]byte, error) {
+	var meta struct {
+		Target, ToolVersion, GeneratedAt          string
+		KernelVersion, ArchSummary, EndianSummary sql.NullString
+		FileCount                                 sql.NullInt64
+		FirmwareSize                              sql.NullInt64
+		BusyboxAudit                              sql.NullString
+		CertCount, RsaCertCount                   sql.NullInt64
+		Services                                  sql.NullString
+		DirBreakdown, DirChartRenderer            sql.NullString
+	}
+	err := r.db.QueryRow(`SELECT target, tool_version, generated_at, kernel_version, arch_summary,
+		endian_summary, file_count, firmware_size, busybox_audit, cert_count, rsa_cert_count, services,
+		dir_breakdown, dir_chart_renderer
+		FROM report_meta WHERE job_id = ?`, jobID).Scan(
+		&meta.Target, &meta.ToolVersion, &meta.GeneratedAt, &meta.KernelVersion, &meta.ArchSummary,
+		&meta.EndianSummary, &meta.FileCount, &meta.FirmwareSize, &meta.BusyboxAudit,
+		&meta.CertCount, &meta.RsaCertCount, &meta.Services, &meta.DirBreakdown, &meta.DirChartRenderer)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no report for job %s", jobID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// listAllRaw, not paginateRaw: paginateRaw caps its limit at 2000
+	// (falling back to 500 above that) since it backs the interactive
+	// paginated views, but a full export must mean *everything*, however
+	// large the scan was -- a firmware with >500 binaries/scripts/files
+	// would otherwise have its JSON export silently truncated.
+	findings, _, err := r.ListFindings(jobID, FindingQuery{NoLimit: true})
+	if err != nil {
+		return nil, err
+	}
+	binaries, err := listAllRaw(r.db, "binaries", jobID)
+	if err != nil {
+		return nil, err
+	}
+	scripts, err := listAllRaw(r.db, "scripts", jobID)
+	if err != nil {
+		return nil, err
+	}
+	components, err := listAllRaw(r.db, "components", jobID)
+	if err != nil {
+		return nil, err
+	}
+	files, err := listAllRaw(r.db, "files", jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	doc := map[string]any{
+		"target":       meta.Target,
+		"tool_version": meta.ToolVersion,
+		"generated_at": meta.GeneratedAt,
+		"binaries":     rawMessagesOrEmpty(binaries),
+		"scripts":      rawMessagesOrEmpty(scripts),
+		"components":   rawMessagesOrEmpty(components),
+		"files":        rawMessagesOrEmpty(files),
+		"findings":     findings,
+	}
+	if meta.BusyboxAudit.Valid && meta.BusyboxAudit.String != "" {
+		doc["busybox_audit"] = json.RawMessage(meta.BusyboxAudit.String)
+	}
+	if meta.KernelVersion.Valid {
+		doc["kernel_version"] = meta.KernelVersion.String
+	}
+	if meta.ArchSummary.Valid {
+		doc["arch_summary"] = meta.ArchSummary.String
+	}
+	if meta.EndianSummary.Valid {
+		doc["endian_summary"] = meta.EndianSummary.String
+	}
+	if meta.FileCount.Valid {
+		doc["file_count"] = meta.FileCount.Int64
+	}
+	if meta.FirmwareSize.Valid {
+		doc["firmware_size"] = meta.FirmwareSize.Int64
+	}
+	if meta.CertCount.Valid {
+		doc["cert_count"] = meta.CertCount.Int64
+	}
+	if meta.DirBreakdown.Valid && meta.DirBreakdown.String != "" {
+		doc["dir_breakdown"] = json.RawMessage(meta.DirBreakdown.String)
+	}
+	if meta.DirChartRenderer.Valid {
+		doc["dir_chart_renderer"] = meta.DirChartRenderer.String
+	}
+	if meta.RsaCertCount.Valid {
+		doc["rsa_cert_count"] = meta.RsaCertCount.Int64
+	}
+	if meta.Services.Valid && meta.Services.String != "" {
+		doc["services"] = json.RawMessage(meta.Services.String)
+	}
+	return json.Marshal(doc)
+}
+
+func rawMessagesOrEmpty(v []json.RawMessage) []json.RawMessage {
+	if v == nil {
+		return []json.RawMessage{}
+	}
+	return v
+}
+
+// --- Cross-job comparison (server-side diff) ---
+//
+// CompareJobs computes the whole A→B diff (findings, files, strings,
+// functions, sensitive strings) here in Go, so the web UI never has to load
+// two full reports into the browser. The old runCompare() fetched
+// /api/jobs/{id}/report (the full-document export) for BOTH sides and called
+// r.json() on each -- but a large scan's report is 600+ MB, which exceeds
+// V8's ~512 MiB maximum string length, so r.json() threw "Invalid string
+// length", the surrounding .catch(()=>({})) swallowed it, and every field
+// read back as empty -> an all-zero diff. This endpoint returns only the
+// deltas (a few MB), keyed exactly as the old client-side diff was, so the
+// existing compare UI renders it unchanged.
+
+const compareFuncRowCap = 5000 // cap detail rows, not counts (counts stay exact)
+const compareStrCap = 2000     // matches the old client-side STR_CAP
+const compareFindingCap = 1000 // cap rendered added/removed findings (totals stay exact)
+
+// compareBinary is the subset of a binaries.data blob the diff needs.
+// Deliberately omits exports/imports (tens of thousands of symbols, ~4 MB per
+// large binary) which the diff never reads -- decoding into this struct drops
+// them without ever materializing them, which is what keeps a compare of two
+// 600 MB reports small.
+type compareBinary struct {
+	Path      string   `json:"path"`
+	MD5       string   `json:"md5"`
+	Strings   []string `json:"strings"`
+	Functions []struct {
+		Name        string            `json:"name"`
+		Fingerprint string            `json:"fingerprint"`
+		Size        json.RawMessage   `json:"size"`
+		Calls       []json.RawMessage `json:"calls"`
+	} `json:"functions"`
+}
+
+type compareFile struct {
+	Path    string   `json:"path"`
+	MD5     string   `json:"md5"`
+	Strings []string `json:"strings"`
+}
+
+// compareRelPath mirrors the old client-side relPath(): strip the job's
+// extraction root so two independently-extracted trees (old vs. new firmware)
+// compare by relative path, not absolute.
+func compareRelPath(path, root string) string {
+	if root != "" && strings.HasPrefix(path, root) {
+		return strings.TrimLeft(path[len(root):], "/")
+	}
+	return path
+}
+
+func compareAsString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// compareAsAddr mirrors JS `${e.address||0}` -- any falsy value becomes "0".
+func compareAsAddr(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return "0"
+	case string:
+		if t == "" {
+			return "0"
+		}
+		return t
+	case json.Number:
+		if t == "" || t == "0" {
+			return "0"
+		}
+		return t.String()
+	case bool:
+		if t {
+			return "true"
+		}
+		return "0"
+	default:
+		return "0"
+	}
+}
+
+func (r *ReportDB) jobTarget(jobID string) (string, error) {
+	var target string
+	err := r.db.QueryRow(`SELECT target FROM report_meta WHERE job_id = ?`, jobID).Scan(&target)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("job %s not found", jobID)
+	}
+	return target, err
+}
+
+func (r *ReportDB) countRows(table, jobID string) (int, error) {
+	var n int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM `+table+` WHERE job_id = ?`, jobID).Scan(&n)
+	return n, err
+}
+
+// findingsForCompare returns, for one job, a map keyed by the same cross-job
+// identity the old client-side diff used (rule|vuln_class|relLoc|sortedCVEs)
+// to the finding object shaped for the compare UI's finding cards.
+func (r *ReportDB) findingsForCompare(jobID, root string) (map[string]map[string]any, error) {
+	rows, err := r.db.Query(`SELECT id, title, vuln_class, severity, confidence,
+		component, rule, description, remediation, cve_ids, evidence, pseudocode
+		FROM findings WHERE job_id = ?`, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]map[string]any{}
+	for rows.Next() {
+		var id, title, vclass, sev, component, rule, desc, remediation, cveIDs, evidence, pseudocode string
+		var conf float64
+		if err := rows.Scan(&id, &title, &vclass, &sev, &conf, &component, &rule,
+			&desc, &remediation, &cveIDs, &evidence, &pseudocode); err != nil {
+			return nil, err
+		}
+		var cves []string
+		_ = json.Unmarshal([]byte(cveIDs), &cves)
+		sortedCVEs := append([]string(nil), cves...)
+		sort.Strings(sortedCVEs)
+
+		var evs []map[string]any
+		dec := json.NewDecoder(strings.NewReader(evidence))
+		dec.UseNumber()
+		_ = dec.Decode(&evs)
+		locParts := make([]string, 0, len(evs))
+		for _, e := range evs {
+			locParts = append(locParts, compareRelPath(compareAsString(e["binary"]), root)+
+				":"+compareAsString(e["function"])+
+				":"+compareAsAddr(e["address"])+
+				":"+compareAsString(e["snippet"]))
+		}
+		key := rule + "|" + vclass + "|" + strings.Join(locParts, ";") + "|" + strings.Join(sortedCVEs, ",")
+		out[key] = map[string]any{
+			"id": id, "title": title, "vuln_class": vclass, "severity": sev,
+			"confidence": conf, "component": component, "rule": rule,
+			"description": desc, "remediation": remediation, "pseudocode": pseudocode,
+			"cve_ids":  json.RawMessage(cveIDs),
+			"evidence": json.RawMessage(evidence),
+		}
+	}
+	return out, rows.Err()
+}
+
+// filesForCompare returns relpath->md5 for the full file listing plus every
+// extracted string from those files (configs/scripts carry their own).
+func (r *ReportDB) filesForCompare(jobID, root string) (map[string]string, map[string]struct{}, error) {
+	raws, err := r.ListFilesAll(jobID, "")
+	if err != nil {
+		return nil, nil, err
+	}
+	byPath := make(map[string]string, len(raws))
+	strs := map[string]struct{}{}
+	for _, raw := range raws {
+		var f compareFile
+		if err := json.Unmarshal(raw, &f); err != nil {
+			continue
+		}
+		byPath[compareRelPath(f.Path, root)] = f.MD5
+		for _, s := range f.Strings {
+			strs[s] = struct{}{}
+		}
+	}
+	return byPath, strs, nil
+}
+
+// binariesForCompare streams the binaries table, decoding only the fields the
+// diff needs (path/md5/strings/functions), keyed by relative path.
+func (r *ReportDB) binariesForCompare(jobID, root string) (map[string]compareBinary, map[string]struct{}, error) {
+	rows, err := r.db.Query(`SELECT data FROM binaries WHERE job_id = ?`, jobID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	byPath := map[string]compareBinary{}
+	strs := map[string]struct{}{}
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, nil, err
+		}
+		var b compareBinary
+		if err := json.Unmarshal([]byte(data), &b); err != nil {
+			continue
+		}
+		byPath[compareRelPath(b.Path, root)] = b
+		for _, s := range b.Strings {
+			strs[s] = struct{}{}
+		}
+	}
+	return byPath, strs, rows.Err()
+}
+
+func (r *ReportDB) CompareJobs(jobA, jobB string, sensitiveKW []string) (map[string]any, error) {
+	rootA, err := r.jobTarget(jobA)
+	if err != nil {
+		return nil, err
+	}
+	rootB, err := r.jobTarget(jobB)
+	if err != nil {
+		return nil, err
+	}
+
+	// ---- findings diff ----
+	fA, err := r.findingsForCompare(jobA, rootA)
+	if err != nil {
+		return nil, err
+	}
+	fB, err := r.findingsForCompare(jobB, rootB)
+	if err != nil {
+		return nil, err
+	}
+	added := []map[string]any{}
+	removed := []map[string]any{}
+	common := []map[string]any{}
+	for k, f := range fB {
+		if _, ok := fA[k]; ok {
+			common = append(common, f)
+		} else {
+			added = append(added, f)
+		}
+	}
+	for k, f := range fA {
+		if _, ok := fB[k]; !ok {
+			removed = append(removed, f)
+		}
+	}
+
+	// ---- files (full listing) + their strings ----
+	filesA, strsA, err := r.filesForCompare(jobA, rootA)
+	if err != nil {
+		return nil, err
+	}
+	filesB, strsB, err := r.filesForCompare(jobB, rootB)
+	if err != nil {
+		return nil, err
+	}
+
+	// ---- binaries (path/md5/strings/functions) ----
+	binsA, binStrA, err := r.binariesForCompare(jobA, rootA)
+	if err != nil {
+		return nil, err
+	}
+	binsB, binStrB, err := r.binariesForCompare(jobB, rootB)
+	if err != nil {
+		return nil, err
+	}
+	for s := range binStrA {
+		strsA[s] = struct{}{}
+	}
+	for s := range binStrB {
+		strsB[s] = struct{}{}
+	}
+
+	// ---- file diff (relpath + md5) ----
+	// Fall back to binaries' paths only if the full file listing is empty
+	// (jobs ingested before the files table existed).
+	if len(filesA) == 0 {
+		for p, b := range binsA {
+			filesA[p] = b.MD5
+		}
+	}
+	if len(filesB) == 0 {
+		for p, b := range binsB {
+			filesB[p] = b.MD5
+		}
+	}
+	fileAdded := []map[string]any{}
+	fileRemoved := []map[string]any{}
+	fileModified := []map[string]any{}
+	fileUnchanged := 0
+	for p, md5 := range filesB {
+		if a, ok := filesA[p]; !ok {
+			fileAdded = append(fileAdded, map[string]any{"path": p, "md5": md5})
+		} else if a != md5 {
+			fileModified = append(fileModified, map[string]any{"path": p, "md5A": a, "md5B": md5})
+		} else {
+			fileUnchanged++
+		}
+	}
+	for p, md5 := range filesA {
+		if _, ok := filesB[p]; !ok {
+			fileRemoved = append(fileRemoved, map[string]any{"path": p, "md5": md5})
+		}
+	}
+
+	// ---- string diff ----
+	addedStrings := []string{}
+	removedStrings := []string{}
+	for s := range strsB {
+		if _, ok := strsA[s]; !ok {
+			addedStrings = append(addedStrings, s)
+		}
+	}
+	for s := range strsA {
+		if _, ok := strsB[s]; !ok {
+			removedStrings = append(removedStrings, s)
+		}
+	}
+
+	// ---- sensitive string diff (keyword list supplied by the client) ----
+	kws := make([]string, 0, len(sensitiveKW))
+	for _, k := range sensitiveKW {
+		if k = strings.ToLower(strings.TrimSpace(k)); k != "" {
+			kws = append(kws, k)
+		}
+	}
+	matchSensitive := func(set map[string]struct{}) map[string]struct{} {
+		out := map[string]struct{}{}
+		for s := range set {
+			low := strings.ToLower(s)
+			for _, k := range kws {
+				if strings.Contains(low, k) {
+					out[s] = struct{}{}
+					break
+				}
+			}
+		}
+		return out
+	}
+	sensA := matchSensitive(strsA)
+	sensB := matchSensitive(strsB)
+	sensitiveAdded := []string{}
+	sensitiveRemoved := []string{}
+	for s := range sensB {
+		if _, ok := sensA[s]; !ok {
+			sensitiveAdded = append(sensitiveAdded, s)
+		}
+	}
+	for s := range sensA {
+		if _, ok := sensB[s]; !ok {
+			sensitiveRemoved = append(sensitiveRemoved, s)
+		}
+	}
+
+	// ---- function diff (same-relpath binaries, matched by name) ----
+	fnCounts := map[string]int{"added": 0, "removed": 0, "modified": 0, "unchanged": 0}
+	fnRows := []map[string]any{}
+	pushRow := func(row map[string]any) {
+		if len(fnRows) < compareFuncRowCap {
+			fnRows = append(fnRows, row)
+		}
+	}
+	for path, binA := range binsA {
+		binB, ok := binsB[path]
+		if !ok {
+			continue
+		}
+		type fnInfo struct {
+			fp    string
+			size  json.RawMessage
+			calls int
+		}
+		fnA := map[string]fnInfo{}
+		for _, f := range binA.Functions {
+			fnA[f.Name] = fnInfo{f.Fingerprint, f.Size, len(f.Calls)}
+		}
+		fnB := map[string]fnInfo{}
+		for _, f := range binB.Functions {
+			fnB[f.Name] = fnInfo{f.Fingerprint, f.Size, len(f.Calls)}
+		}
+		for name, a := range fnA {
+			b, ok := fnB[name]
+			if !ok {
+				fnCounts["removed"]++
+				pushRow(map[string]any{"path": path, "name": name, "status": "removed",
+					"sizeA": a.size, "sizeB": nil, "callsA": a.calls, "callsB": nil})
+			} else if a.fp == "" || b.fp == "" || a.fp != b.fp {
+				fnCounts["modified"]++
+				pushRow(map[string]any{"path": path, "name": name, "status": "modified",
+					"sizeA": a.size, "sizeB": b.size, "callsA": a.calls, "callsB": b.calls})
+			} else {
+				fnCounts["unchanged"]++
+			}
+		}
+		for name, b := range fnB {
+			if _, ok := fnA[name]; !ok {
+				fnCounts["added"]++
+				pushRow(map[string]any{"path": path, "name": name, "status": "added",
+					"sizeA": nil, "sizeB": b.size, "callsA": nil, "callsB": b.calls})
+			}
+		}
+	}
+
+	binACount, _ := r.countRows("binaries", jobA)
+	binBCount, _ := r.countRows("binaries", jobB)
+	scrACount, _ := r.countRows("scripts", jobA)
+	scrBCount, _ := r.countRows("scripts", jobB)
+
+	capStrings := func(s []string) []string {
+		if len(s) > compareStrCap {
+			return s[:compareStrCap]
+		}
+		return s
+	}
+	// Cap the rendered finding lists (the browser can't lay out 50k+ cards),
+	// but keep the true totals for the headline counts. Two very different
+	// firmwares legitimately diff into tens of thousands of findings.
+	addedTotal, removedTotal, commonTotal := len(added), len(removed), len(common)
+	if len(added) > compareFindingCap {
+		added = added[:compareFindingCap]
+	}
+	if len(removed) > compareFindingCap {
+		removed = removed[:compareFindingCap]
+	}
+	if len(common) > compareFindingCap {
+		common = common[:compareFindingCap]
+	}
+
+	return map[string]any{
+		"added": added, "addedTotal": addedTotal,
+		"removed": removed, "removedTotal": removedTotal,
+		"common": common, "commonTotal": commonTotal, "commonCount": commonTotal,
+		"binariesA": binACount, "binariesB": binBCount,
+		"scriptsA": scrACount, "scriptsB": scrBCount,
+		"filesA": len(filesA), "filesB": len(filesB),
+		"fileDiff": map[string]any{
+			"added": fileAdded, "removed": fileRemoved,
+			"modified": fileModified, "unchangedCount": fileUnchanged,
+		},
+		"functionDiff": map[string]any{
+			"counts": fnCounts, "rows": fnRows,
+			"rowsCapped": len(fnRows) >= compareFuncRowCap,
+		},
+		"stringsAdded": capStrings(addedStrings), "stringsAddedTotal": len(addedStrings),
+		"stringsRemoved": capStrings(removedStrings), "stringsRemovedTotal": len(removedStrings),
+		"sensitiveAdded": sensitiveAdded, "sensitiveRemoved": sensitiveRemoved,
+	}, nil
+}

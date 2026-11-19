@@ -1,0 +1,25 @@
+DEFILE — Firmware Reverse Engineering and Security Analysis
+
+DEFILE is a modified distribution of IFDA (IoT Firmware Deep Analysis), whose
+original public source is identified in the supplied project as:
+https://github.com/cn0xroot/IFDA
+
+Acknowledgment is retained for the original IFDA project and the authors and
+contributors identified by its repository history. Existing copyright notices,
+the Apache License 2.0 in LICENSE, and third-party licenses remain applicable.
+No transfer of trademark rights or endorsement by upstream contributors is implied.
+
+Significant modifications in this distribution, 2026-11-19:
+- Product, Python package, CLI, Go module, progress protocol, configuration
+  namespace, executable and documentation identity migrated to DEFILE.
+- Product interface and authored documentation converted to native English.
+- Legacy data, environment and browser-setting compatibility retained.
+- Documentation screenshots rebranded or recaptured.
+- Python package data included explicitly in distribution metadata.
+- Shared Full/Live workbench styling, static sample adapter, provenance and
+  demonstration disclosures, evidence navigation and context restoration added.
+- Independent public-source documentation and static deployment configuration
+  prepared for the 2026-11-20 release.
+
+Third-party names such as moria, Ghidra, cve-bin-tool, Alpine.js, capstone,
+pyelftools, cryptography, Pillow and modernc.org/sqlite retain their own identities.
