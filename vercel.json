@@ -3,5 +3,16 @@
   "framework": null,
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/live"
+  "outputDirectory": "dist/live",
+  "headers": [
+    {"source":"/demo/data/sample-original.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-original.json\""}]},
+    {"source":"/demo/data/sample-hardened.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-hardened.json\""}]},
+    {"source":"/demo/data/sample-corpus.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-corpus.json\""}]},
+    {"source":"/demo/data/sample-original.md","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-original.md\""}]},
+    {"source":"/demo/data/sample-hardened.md","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-hardened.md\""}]},
+    {"source":"/demo/data/sample-corpus.md","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-corpus.md\""}]},
+    {"source":"/demo/data/sample-original.sbom.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-original.sbom.json\""}]},
+    {"source":"/demo/data/sample-hardened.sbom.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-hardened.sbom.json\""}]},
+    {"source":"/demo/data/sample-corpus.sbom.json","headers":[{"key":"Content-Disposition","value":"attachment; filename=\"defile-demo-sample-corpus.sbom.json\""}]}
+  ]
 }
