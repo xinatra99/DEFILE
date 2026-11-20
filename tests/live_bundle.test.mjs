@@ -8,6 +8,8 @@ function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e
 test('static bundle has shared UI, recorded data, disclosures, licenses and no runtime artifacts',()=>{
   for(const name of ['index.html','workbench.js','interface.js','demo/live.js','demo/data-adapter.js','demo/data/data.json','demo/data/manifest.json','LICENSE','NOTICE','samples/fixtures/probe.c'])assert.ok(fs.existsSync(path.join(root,name)),name);
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.match(html,/DEFILE Live/);assert.match(html,/demo\/live.js/);assert.match(html,/Illustrative pseudocode/);
+  assert.match(html,/<title>DEFILE \| Demo<\/title>/);assert.match(html,/href="\/demo\/favicon\.svg"/);
+  for(const icon of ['favicon.svg','demo/favicon.svg'])assert.equal(fs.readFileSync(path.join(root,icon),'utf8'),fs.readFileSync(new URL('../demo/favicon.svg',import.meta.url),'utf8'));
   assert.equal(fs.readFileSync(path.join(root,'workbench.js'),'utf8'),fs.readFileSync(new URL('../service/web/workbench.js',import.meta.url),'utf8'));
   for(const file of files(root)){
     assert.doesNotMatch(path.sep+path.relative(root,file),/[\\/](?:\.tools|\.validation|\.venv|\.git)[\\/]|users\.json$|ai\.key$|reports\.db$|\.elf$|\.exe$/);
